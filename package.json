@@ -1,0 +1,16 @@
+{
+  "name": "npm-vwconnectapi",
+  "version": "0.0.1",
+  "description": "Provides an API for VW Connect",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Volkswagen",
+    "Connect",
+    "API"
+  ],
+  "author": "nightsha-de",
+  "license": "MIT"
+}
