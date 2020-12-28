@@ -1,13 +1,5 @@
 "use strict";
 
-/*
- * Created with @iobroker/create-adapter v1.17.0
- */
-
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
-//const utils = require("@iobroker/adapter-core");
-
 const request = require("request");
 const crypto = require("crypto");
 const { Crypto } = require("@peculiar/webcrypto");
@@ -16,15 +8,8 @@ const traverse = require("traverse");
 const jsdom = require("jsdom");
 const { resolve } = require("path");
 const { JSDOM } = jsdom;
-class VwWeConnect /*extends utils.Adapter*/ {
-    /**
-     * @param {Partial<ioBroker.AdapterOptions>} [options={}]
-     */
-    constructor(/*options*/) {
-    /*    super({
-            ...options,
-            name: "vw-connect",
-        });*/
+class VwWeConnect {
+    constructor() {
         this.on("ready", this.onReady.bind(this));
         // this.on("objectChange", this.onObjectChange.bind(this));
         this.on("stateChange", this.onStateChange.bind(this));
@@ -255,6 +240,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             });
         this.subscribeStates("*");
     }
+    
     login() {
         return new Promise(async (resolve, reject) => {
             let nonce = this.getNonce();
@@ -507,6 +493,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     receiveLoginUrl() {
         return new Promise((resolve, reject) => {
             request(
@@ -537,6 +524,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     replaceVarInUrl(url, vin) {
         return url
             .replace("/$vin/", "/" + vin + "/")
@@ -545,6 +533,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             .replace("/$country/", "/" + this.country + "/")
             .replace("/$tripType", "/" + this.config.tripType);
     }
+    
     getTokens(getRequest, code_verifier, reject, resolve) {
         let hash = "";
         if (getRequest.uri.hash) {
@@ -866,6 +855,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     getHomeRegion(vin) {
         return new Promise((resolve, reject) => {
             this.log.debug("getHomeRegion");
@@ -911,6 +901,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     getCarData() {
         return new Promise((resolve, reject) => {
             this.log.debug("getData");
@@ -1349,6 +1340,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     getIdStatus(vin) {
         return new Promise((resolve, reject) => {
             request.get(
@@ -1422,6 +1414,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     async setIdRemote(vin, action, value, bodyContent) {
         return new Promise(async (resolve, reject) => {
             const pre = this.name + "." + this.instance;
@@ -1483,6 +1476,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     refreshIDToken() {
         return new Promise((resolve, reject) => {
             request.get(
@@ -1523,6 +1517,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     getVehicleData(vin) {
         return new Promise((resolve, reject) => {
             if (this.config.type === "go") {
@@ -2282,6 +2277,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     setVehicleStatusv2(vin, url, body, contentType, secToken) {
         return new Promise((resolve, reject) => {
             url = this.replaceVarInUrl(url, vin);
@@ -2335,6 +2331,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     requestSecToken(vin, service) {
         return new Promise((resolve, reject) => {
             request.get(
@@ -2429,6 +2426,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             );
         });
     }
+    
     generateSecurPin(challenge) {
         return new Promise((resolve, reject) => {
             if (!this.config.pin) {
@@ -2447,6 +2445,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             });
         });
     }
+    
     getCodeChallenge() {
         let hash = "";
         let result = "";
@@ -2461,12 +2460,14 @@ class VwWeConnect /*extends utils.Adapter*/ {
         }
         return [result, hash];
     }
+    
     getNonce() {
         const timestamp = Date.now();
         let hash = crypto.createHash("sha256").update(timestamp.toString()).digest("base64");
         hash = hash.slice(0, hash.length - 1);
         return hash;
     }
+    
     toHexString(byteArray) {
         return Array.prototype.map
             .call(byteArray, function (byte) {
@@ -2482,6 +2483,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
         }
         return result;
     }
+    
     stringIsAValidUrl(s) {
         try {
             new URL(s);
@@ -2490,6 +2492,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
             return false;
         }
     }
+    
     randomString(length) {
         var result = "";
         var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -2499,6 +2502,7 @@ class VwWeConnect /*extends utils.Adapter*/ {
         }
         return result;
     }
+    
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
      * @param {() => void} callback
