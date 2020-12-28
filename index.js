@@ -20,19 +20,18 @@ class VwWeConnect /*extends utils.Adapter*/ {
     /**
      * @param {Partial<ioBroker.AdapterOptions>} [options={}]
      */
-    /*constructor(options) {
-        super({
+    constructor(/*options*/) {
+    /*    super({
             ...options,
             name: "vw-connect",
-        });
+        });*/
         this.on("ready", this.onReady.bind(this));
         // this.on("objectChange", this.onObjectChange.bind(this));
         this.on("stateChange", this.onStateChange.bind(this));
         // this.on("message", this.onMessage.bind(this));
         this.on("unload", this.onUnload.bind(this));
-*/
-    constructor() {
-        //this.jar = request.jar();
+        
+        this.jar = request.jar();
 
         this.refreshTokenInterval = null;
         this.vwrefreshTokenInterval = null;
