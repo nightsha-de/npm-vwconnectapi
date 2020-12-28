@@ -8,6 +8,9 @@ const traverse = require("traverse");
 const jsdom = require("jsdom");
 const { resolve } = require("path");
 const { JSDOM } = jsdom;
+
+module.exports.VwWeConnect;
+
 class VwWeConnect {
     constructor() {
         this.on("ready", this.onReady.bind(this));
