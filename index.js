@@ -10,6 +10,17 @@ const { resolve } = require("path");
 const { JSDOM } = jsdom;
 
 class VwWeConnect {
+    var config = {
+        userid: 0,
+        user: "testuser",
+        password: "testpass",
+        pin: "123",
+        type: "id",
+        interval: 10,
+        forceinterval: 360,
+        numberOfTrips: 1
+    }
+    
     constructor() {
         //this.on("ready", this.onReady.bind(this));
         //// this.on("objectChange", this.onObjectChange.bind(this));
