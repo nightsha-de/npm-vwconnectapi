@@ -82,6 +82,17 @@ class VwWeConnect {
         ];
     }
 
+    setConfig() {
+        this.config.userid = 0;
+        this.config.user = "testuser";
+        this.config.password = "testpass";
+        this.config.pin = "123";
+        this.config.type = "id";
+        this.config.interval = 10;
+        this.config.forceinterval = 360;
+        this.config.numberOfTrips = 1;
+    }
+    
     /**
      * Is called when databases are connected and adapter received configuration.
      */
