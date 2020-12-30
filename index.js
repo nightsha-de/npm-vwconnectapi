@@ -123,6 +123,11 @@ class VwWeConnect {
         //this.config.numberOfTrips = 1;
     }
     
+    // dummy function, normally inherited from ioBroker
+    setState(pMessage, pStatus1, pStatus2) {
+      this.statusMessage = pMessage;
+    }
+
     /**
      * Is called when databases are connected and adapter received configuration.
      */
