@@ -13,13 +13,17 @@ class Log {
   constructor() {
     console.log("Start logging instance");
   }
-    
+  
   debug(pMessage) {
     console.log("DEBUG: " + pMessage);
   }
     
   error(pMessage) {
     console.log("ERROR: " + pMessage);
+  }
+  
+  info(pMessage) {
+    console.log("INFO:  " + pMessage);
   }
 }
 
