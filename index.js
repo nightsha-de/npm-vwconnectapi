@@ -10,7 +10,7 @@ const { resolve } = require("path");
 const { JSDOM } = jsdom;
 
 class VwWeConnect {
-    var config = {
+    config = {
         userid: 0,
         user: "testuser",
         password: "testpass",
