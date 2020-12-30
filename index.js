@@ -9,6 +9,20 @@ const jsdom = require("jsdom");
 const { resolve } = require("path");
 const { JSDOM } = jsdom;
 
+class Log {
+  constructor() {
+    console.log("Start logging instance");
+  }
+    
+  debug(pMessage) {
+    console.log("DEBUG: " + pMessage);
+  }
+    
+  error(pMessage) {
+    console.log("ERROR: " + pMessage);
+  }
+}
+
 class VwWeConnect {
     config = {
         userid: 0,
@@ -28,6 +42,7 @@ class VwWeConnect {
         //// this.on("message", this.onMessage.bind(this));
         //this.on("unload", this.onUnload.bind(this));
         
+        this.log = new Log();
         this.jar = request.jar();
 
         this.refreshTokenInterval = null;
