@@ -112,15 +112,15 @@ class VwWeConnect {
         ];
     }
 
-    setConfig() {
-        this.config.userid = 0;
-        this.config.user = "testuser";
-        this.config.password = "testpass";
-        this.config.pin = "123";
-        this.config.type = "id";
-        this.config.interval = 10;
-        this.config.forceinterval = 360;
-        this.config.numberOfTrips = 1;
+    setCredentials(pUser, pPass, pPin) {
+        //this.config.userid = 0;
+        this.config.user = pUser;
+        this.config.password = pPass;
+        this.config.pin = pPin;
+        //this.config.type = "id";
+        //this.config.interval = 10;
+        //this.config.forceinterval = 360;
+        //this.config.numberOfTrips = 1;
     }
     
     /**
@@ -2890,3 +2890,4 @@ if (module.parent) { */
 }
 */
 module.exports.VwWeConnect = VwWeConnect;
+module.exports.Log = Log;
