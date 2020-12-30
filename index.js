@@ -360,6 +360,10 @@ class VwWeConnect {
                             reject();
                             return;
                         }
+                        this.log.info("Email: " + form["email"]);
+                        this.log.info("ClientId: " + this.clientId);
+                        this.log.info("xrequest: " + this.xrequest);
+                        this.log.info("jar: " + this.jar);
                         request.post(
                             {
                                 url: "https://identity.vwgroup.io/signin-service/v1/" + this.clientId + "/login/identifier",
