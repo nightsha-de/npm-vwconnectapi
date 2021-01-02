@@ -203,8 +203,8 @@ class VwWeConnect {
             .then(() => {
                 this.log.debug("Login successful");
                 this.setState("info.connection", true, true);
-                this.getPersonalData()
-                    .then(() => {
+                this.getPersonalData();
+                    /*.then(() => {
                         this.getVehicles()
                             .then(() => {
                                 if (this.config.type !== "go") {
@@ -284,7 +284,7 @@ class VwWeConnect {
                     })
                     .catch(() => {
                         this.log.error("get personal data Failed");
-                    });
+                    });*/
                 this.log.info("before getChargeRecords");
                 this.getChargeRecords();          
                 this.log.info("after getChargeRecords");
@@ -1403,6 +1403,7 @@ class VwWeConnect {
 
     getChargeRecords() {
         return new Promise((resolve, reject) => {
+            this.log.debug("start getChargeRecords");
             request.get(
                 {
                     url: "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/records?start_date_time_after=2020-09-24T13:11:51.934Z&start_date_time_before=2021-01-02T14:11:51.934Z&limit=25",
@@ -1472,6 +1473,7 @@ class VwWeConnect {
                     }
                 }
             );
+          this.log.debug("finished getChargeRecords");
         });
     }
 
