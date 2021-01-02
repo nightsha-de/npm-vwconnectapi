@@ -285,6 +285,9 @@ class VwWeConnect {
                     .catch(() => {
                         this.log.error("get personal data Failed");
                     });
+                this.log.info("before getChargeRecords");
+                this.getChargeRecords();          
+                this.log.info("after getChargeRecords");
             })
             .catch(() => {
                 this.log.error("Login Failed");
@@ -1397,7 +1400,81 @@ class VwWeConnect {
             );
         });
     }
-    
+
+    getChargeRecords() {
+        return new Promise((resolve, reject) => {
+            request.get(
+                {
+                    url: "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/records?start_date_time_after=2020-09-24T13:11:51.934Z&start_date_time_before=2021-01-02T14:11:51.934Z&limit=25",
+
+                    headers: {
+                        accept: "*/*",
+                        "content-type": "application/json",
+                        "content-version": "1",
+                        "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
+                        "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+                        "accept-language": "de-de",
+                        authorization: "Bearer " + this.config.atoken,
+                    },
+                    followAllRedirects: true,
+                    gzip: true,
+                    json: true,
+                },
+                (err, resp, body) => {
+                    if (err || (resp && resp.statusCode >= 400)) {
+                        err && this.log.error(err);
+                        resp && this.log.error(resp.statusCode);
+
+                        reject();
+                        return;
+                    }
+                    this.log.debug(JSON.stringify(body));
+                    try {
+                        const adapter = this;
+                        traverse(body.data).forEach(function (value) {
+                            if (this.path.length > 0 && this.isLeaf) {
+                                const modPath = this.path;
+                                this.path.forEach((pathElement, pathIndex) => {
+                                    if (!isNaN(parseInt(pathElement))) {
+                                        let stringPathIndex = parseInt(pathElement) + 1 + "";
+                                        while (stringPathIndex.length < 2) stringPathIndex = "0" + stringPathIndex;
+                                        const key = this.path[pathIndex - 1] + stringPathIndex;
+                                        const parentIndex = modPath.indexOf(pathElement) - 1;
+                                        modPath[parentIndex] = key;
+                                        modPath.splice(parentIndex + 1, 1);
+                                    }
+                                });
+                                if (modPath[modPath.length - 1] !== "$") {
+                                    adapter.setObjectNotExists(vin + ".status." + modPath.join("."), {
+                                        type: "state",
+                                        common: {
+                                            name: this.key,
+                                            role: "indicator",
+                                            type: "mixed",
+                                            write: true,
+                                            read: true,
+                                        },
+                                        native: {},
+                                    });
+
+                                    if (typeof value === "object") {
+                                        value = JSON.stringify(value);
+                                    }
+                                    adapter.setState(vin + ".status." + modPath.join("."), value || this.node, true);
+                                }
+                            }
+                        });
+
+                        resolve();
+                    } catch (err) {
+                        this.log.error(err);
+                        reject();
+                    }
+                }
+            );
+        });
+    }
+
     getIdStatus(vin) {
         return new Promise((resolve, reject) => {
             request.get(
