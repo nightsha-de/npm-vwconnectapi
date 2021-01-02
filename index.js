@@ -123,6 +123,10 @@ class VwWeConnect {
         //this.config.numberOfTrips = 1;
     }
     
+    setConfig(pType) {
+      this.config.type = pType;
+    }
+
     // dummy function, normally inherited from ioBroker
     setState(pMessage, pStatus1, pStatus2) {
       this.statusMessage = pMessage;
