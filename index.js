@@ -289,7 +289,9 @@ class VwWeConnect {
             .catch(() => {
                 this.log.error("Login Failed");
             });
-        this.subscribeStates("*");
+        
+      // removed, was inherited from ioBroker?
+      // this.subscribeStates("*");
     }
     
     login() {
