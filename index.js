@@ -158,7 +158,6 @@ class VwWeConnect {
             this.xclientId = "";
             this.scope = "openid profile badge cars dealers birthdate vin";
             this.redirect = "weconnect://authenticated";
-            this.redirect = "https://login.apps.emea.vwapps.io/authorize/v2/callback"; // TODO testing old value, since weconnect didn't seem to work
             this.xrequest = "com.volkswagen.weconnect";
             this.responseType = "code id_token token";
             this.xappversion = "";
