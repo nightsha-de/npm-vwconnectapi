@@ -112,7 +112,20 @@ class VwWeConnect {
         ];
     }
 
-    that.setObjectNotExists = function setObjectNotExists(id, object, options, callback) {
+    _fixId(id) {
+        var result  = '';
+        // If id is an object
+        if (typeof id === 'object') {
+            // Add namespace + device + channel
+            result = that.namespace + '.' + (id.device ? id.device + '.' : '') + (id.channel ? id.channel + '.' : '') + id.state;
+        } else {
+            result = id;
+            if (!that._namespaceRegExp.test(id)) result = that.namespace + '.' + id;
+        }
+        return result;
+    }
+
+    setObjectNotExists(id, object, options, callback) {
         if (typeof options === 'function') {
             callback = options;
             options = null;
@@ -128,7 +141,7 @@ class VwWeConnect {
                 that.objects.setObject(id, object, callback);
             }
         });
-    };
+    }
 
     setCredentials(pUser, pPass, pPin) {
         //this.config.userid = 0;
