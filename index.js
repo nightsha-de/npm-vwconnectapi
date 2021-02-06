@@ -112,6 +112,24 @@ class VwWeConnect {
         ];
     }
 
+    that.setObjectNotExists = function setObjectNotExists(id, object, options, callback) {
+        if (typeof options === 'function') {
+            callback = options;
+            options = null;
+        }
+        id = that._fixId(id);
+
+        if (object.children || object.parent) {
+            logger.warn(that.namespace + ' Do not use parent or children for ' + id);
+        }
+
+        that.objects.getObject(id, options, function (err, obj) {
+            if (!obj) {
+                that.objects.setObject(id, object, callback);
+            }
+        });
+    };
+
     setCredentials(pUser, pPass, pPin) {
         //this.config.userid = 0;
         this.config.user = pUser;
