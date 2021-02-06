@@ -112,35 +112,26 @@ class VwWeConnect {
         ];
     }
 
-    _fixId(id) {
-        var result  = '';
-        // If id is an object
-        if (typeof id === 'object') {
-            // Add namespace + device + channel
-            result = that.namespace + '.' + (id.device ? id.device + '.' : '') + (id.channel ? id.channel + '.' : '') + id.state;
-        } else {
-            result = id;
-            if (!that._namespaceRegExp.test(id)) result = that.namespace + '.' + id;
-        }
-        return result;
-    }
-
     setObjectNotExists(id, object, options, callback) {
+        this.log.debug("id: " + id);
+        this.log.debug("object: " + object);
+        /*
         if (typeof options === 'function') {
             callback = options;
             options = null;
         }
-        id = that._fixId(id);
+        id = _fixId(id);
 
         if (object.children || object.parent) {
-            logger.warn(that.namespace + ' Do not use parent or children for ' + id);
+            logger.warn(namespace + ' Do not use parent or children for ' + id);
         }
 
-        that.objects.getObject(id, options, function (err, obj) {
+        objects.getObject(id, options, function (err, obj) {
             if (!obj) {
-                that.objects.setObject(id, object, callback);
+                objects.setObject(id, object, callback);
             }
         });
+        */
     }
 
     setCredentials(pUser, pPass, pPin) {
