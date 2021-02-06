@@ -114,7 +114,7 @@ class VwWeConnect {
 
     setObjectNotExists(id, object, options, callback) {
         this.log.debug("id: " + id);
-        this.log.debug("object: " + object);
+        this.log.debug("object: " + JSON.stringify(object));
         /*
         if (typeof options === 'function') {
             callback = options;
