@@ -202,10 +202,9 @@ class VwWeConnect {
         }
         this.login()
             .then(() => {
-                this.log.debug("Login successful");
                 this.setState("info.connection", true, true);
-                this.getPersonalData();
-                    /*.then(() => {
+                this.getPersonalData()
+                    .then(() => {
                         this.getVehicles()
                             .then(() => {
                                 if (this.config.type !== "go") {
@@ -285,10 +284,10 @@ class VwWeConnect {
                     })
                     .catch(() => {
                         this.log.error("get personal data Failed");
-                    });*/
-                this.log.info("before getChargeRecords");
-                this.getChargeRecords();          
-                this.log.info("after getChargeRecords");
+                    });
+                //this.log.info("before getChargeRecords");
+                //this.getChargeRecords();          
+                //this.log.info("after getChargeRecords");
             })
             .catch(() => {
                 this.log.error("Login Failed");
