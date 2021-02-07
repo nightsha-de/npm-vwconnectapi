@@ -112,6 +112,7 @@ class VwWeConnect {
         ];
     }
 
+    // inherited from ioBroker, make it a dummy function for now
     setObjectNotExists(id, object, options, callback) {
         this.log.debug("id: " + id);
         this.log.debug("object: " + JSON.stringify(object));
@@ -238,7 +239,7 @@ class VwWeConnect {
                                         } else {
                                             this.getHomeRegion(vin)
                                                 .catch(() => {
-                                                    this.log.debug("get home region Failed");
+                                                    this.log.warn("get home region Failed");
                                                 })
                                                 .finally(() => {
                                                     this.getVehicleData(vin).catch(() => {
@@ -263,6 +264,8 @@ class VwWeConnect {
                                     });
                                 }
 
+                                this.log.debug("before this.updateInterval = setInterval(() => {}");
+                          
                                 this.updateInterval = setInterval(() => {
                                     if (this.config.type === "go") {
                                         this.getVehicles();
@@ -285,7 +288,7 @@ class VwWeConnect {
                                         });
                                     }
                                 }, this.config.interval * 60 * 1000);
-
+this.log.debug("if(this.config.forceinterval > 0)");
                                 if (this.config.forceinterval > 0) {
                                     this.fupdateInterval = setInterval(() => {
                                         if (this.config.type === "go") {
@@ -314,7 +317,7 @@ class VwWeConnect {
             .catch(() => {
                 this.log.error("Login Failed");
             });
-        
+this.log.debug("onReady END");
       // removed, was inherited from ioBroker?
       // this.subscribeStates("*");
     }
@@ -880,6 +883,7 @@ class VwWeConnect {
 
     getPersonalData() {
         return new Promise((resolve, reject) => {
+            this.log.debug("START getPersonalData()");
             if (this.config.type === "audi" || this.config.type === "go" || this.config.type === "id") {
                 resolve();
                 return;
@@ -940,7 +944,7 @@ class VwWeConnect {
     
     getHomeRegion(vin) {
         return new Promise((resolve, reject) => {
-            this.log.debug("getHomeRegion");
+            this.log.debug("START getHomeRegion");
             request.get(
                 {
                     url: "https://mal-1a.prd.ece.vwg-connect.com/api/cs/vds/v1/vehicles/" + vin + "/homeRegion",
@@ -986,7 +990,7 @@ class VwWeConnect {
     
     getCarData() {
         return new Promise((resolve, reject) => {
-            this.log.debug("getData");
+            this.log.debug("START getCarData");
             request.get(
                 {
                     url: "https://customer-profile.apps.emea.vwapps.io/v1/customers/" + this.config.userid + "/realCarData",
@@ -1041,6 +1045,7 @@ class VwWeConnect {
 
     getVehicles() {
         return new Promise((resolve, reject) => {
+            this.log.debug("START getVehicles");
             let url = this.replaceVarInUrl("https://msg.volkswagen.de/fs-car/usermanagement/users/v1/$type/$country/vehicles");
             let headers = {
                 "User-Agent": "okhttp/3.7.0",
@@ -1421,11 +1426,12 @@ class VwWeConnect {
                 }
             );
         });
+        this.log.debug("END getVehicles");
     }
 
     getChargeRecords() {
         return new Promise((resolve, reject) => {
-            this.log.debug("start getChargeRecords");
+            this.log.debug("START getChargeRecords");
             request.get(
                 {
                     url: "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/records?start_date_time_after=2020-09-24T13:11:51.934Z&start_date_time_before=2021-01-02T14:11:51.934Z&limit=25",
@@ -1495,12 +1501,13 @@ class VwWeConnect {
                     }
                 }
             );
-          this.log.debug("finished getChargeRecords");
+          this.log.debug("END getChargeRecords");
         });
     }
 
     getIdStatus(vin) {
         return new Promise((resolve, reject) => {
+            this.log.debug("START getIdStatus");
             request.get(
                 {
                     url: "https://mobileapi.apps.emea.vwapps.io/vehicles/" + vin + "/status",
@@ -1570,6 +1577,7 @@ class VwWeConnect {
                     }
                 }
             );
+            this.log.debug("END getIdStatus");
         });
     }
     
