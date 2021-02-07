@@ -264,7 +264,7 @@ class VwWeConnect {
                                     });
                                 }
 
-                                this.log.debug("before this.updateInterval = setInterval(() => {}");
+this.log.debug("before this.updateInterval = setInterval(() => {}");
                           
                                 this.updateInterval = setInterval(() => {
                                     if (this.config.type === "go") {
@@ -313,6 +313,7 @@ this.log.debug("if(this.config.forceinterval > 0)");
                 //this.log.info("before getChargeRecords");
                 //this.getChargeRecords();          
                 //this.log.info("after getChargeRecords");
+this.log.debug("onReady end login");
             })
             .catch(() => {
                 this.log.error("Login Failed");
@@ -914,7 +915,7 @@ this.log.debug("onReady END");
                             this.log.error(JSON.stringify(body.error));
                             reject();
                         }
-                        this.log.debug(body);
+                        this.log.debug("getPersonalData: " + JSON.stringify(body));
                         const data = JSON.parse(body);
                         this.config.identifier = data.businessIdentifierValue;
                         Object.keys(data).forEach((key) => {
@@ -971,7 +972,7 @@ this.log.debug("onReady END");
                             this.log.error(JSON.stringify(body.error));
                             reject();
                         }
-                        this.log.debug(body);
+                        this.log.debug("getHomeRegion: " + JSON.stringify(body));
                         if (body.homeRegion && body.homeRegion.baseUri && body.homeRegion.baseUri.content) {
                             if (body.homeRegion.baseUri.content !== "https://mal-1a.prd.ece.vwg-connect.com/api") {
                                 this.homeRegion = body.homeRegion.baseUri.content.split("/api")[0].replace("mal-", "fal-");
@@ -1016,7 +1017,7 @@ this.log.debug("onReady END");
                             this.log.error(JSON.stringify(body.error));
                             reject();
                         }
-                        this.log.debug(body);
+                        this.log.debug("getCarData: " + JSON.stringify(body));
                         const data = JSON.parse(body);
                         Object.keys(data).forEach((key) => {
                             this.setObjectNotExists("car." + key, {
@@ -1097,7 +1098,7 @@ this.log.debug("onReady END");
                             reject();
                             return;
                         }
-                        this.log.debug(JSON.stringify(body));
+                        this.log.debug("getVehicles: " + JSON.stringify(body));
                         if (this.config.type === "id") {
                             body.data.forEach((element) => {
                                 const vin = element.vin;
@@ -1457,7 +1458,7 @@ this.log.debug("onReady END");
                         reject();
                         return;
                     }
-                    this.log.debug(JSON.stringify(body));
+                    this.log.debug("getChargeRecords: " + JSON.stringify(body));
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
@@ -1533,7 +1534,7 @@ this.log.debug("onReady END");
                         reject();
                         return;
                     }
-                    this.log.debug(JSON.stringify(body));
+                    this.log.debug("getIdStatus: " + JSON.stringify(body));
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
@@ -1603,7 +1604,7 @@ this.log.debug("onReady END");
                 method = "PUT";
             }
             this.log.debug("https://mobileapi.apps.emea.vwapps.io/vehicles/" + vin + "/" + action + "/" + value);
-            this.log.debug(JSON.stringify(body));
+            this.log.debug("setIdRemote: " + JSON.stringify(body));
             request(
                 {
                     method: method,
@@ -1723,7 +1724,7 @@ this.log.debug("onReady END");
                         return;
                     }
                     try {
-                        this.log.debug(JSON.stringify(body));
+                        this.log.debug("getVehicleData: " + JSON.stringify(body));
                         const adapter = this;
                         let result = body.vehicleData;
                         if (!result) {
@@ -1895,7 +1896,7 @@ this.log.debug("onReady END");
                             return;
                         }
                         try {
-                            this.log.debug(JSON.stringify(body));
+                            this.log.debug("requestStatusUpdate: " + JSON.stringify(body));
                             resolve();
                         } catch (err) {
                             this.log.error(err);
@@ -1958,7 +1959,7 @@ this.log.debug("onReady END");
                         }
                     }
                     try {
-                        this.log.debug(JSON.stringify(body));
+                        this.log.debug("getVehicleStatus: " + JSON.stringify(body));
                         if (resp) {
                             this.etags[url] = resp.headers.etag;
                             if (resp.statusCode === 304) {
