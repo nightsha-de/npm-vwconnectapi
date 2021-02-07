@@ -159,7 +159,7 @@ class VwWeConnect {
     /**
      * Is called when databases are connected and adapter received configuration.
      */
-    /*async*/ onReady() {
+    async onReady() {
         // Initialize your adapter here
 
         this.setState("info.connection", false, true);
