@@ -28,8 +28,6 @@ class Log {
 }
 
 class VwWeConnect {
-    var boolFinishedReading = false;
-  
     config = {
         userid: 0,
         user: "testuser",
@@ -48,6 +46,7 @@ class VwWeConnect {
         //// this.on("message", this.onMessage.bind(this));
         //this.on("unload", this.onUnload.bind(this));
         
+        this.boolFinishedReading = false;
         this.log = new Log();
         this.jar = request.jar();
 
@@ -114,6 +113,10 @@ class VwWeConnect {
         ];
     }
 
+    finishedReading() {
+      return this.boolFinishedReading;
+    }
+
     // inherited from ioBroker, make it a dummy function for now
     setObjectNotExists(id, object, options, callback) {
         this.log.debug("id: " + id);
@@ -162,7 +165,7 @@ class VwWeConnect {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        boolFinishedReading = false;
+        this.boolFinishedReading = false;
         // Initialize your adapter here
 
         this.setState("info.connection", false, true);
@@ -1583,7 +1586,7 @@ this.log.debug("onReady END");
                 }
             );
             this.log.debug("END getIdStatus");
-            boolFinishedReading = true;
+            this.boolFinishedReading = true;
         });
     }
     
