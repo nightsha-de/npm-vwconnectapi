@@ -28,6 +28,8 @@ class Log {
 }
 
 class VwWeConnect {
+    var boolFinishedReading = false;
+  
     config = {
         userid: 0,
         user: "testuser",
@@ -160,6 +162,7 @@ class VwWeConnect {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
+        boolFinishedReading = false;
         // Initialize your adapter here
 
         this.setState("info.connection", false, true);
@@ -1580,6 +1583,7 @@ this.log.debug("onReady END");
                 }
             );
             this.log.debug("END getIdStatus");
+            boolFinishedReading = true;
         });
     }
     
