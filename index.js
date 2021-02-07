@@ -2674,7 +2674,7 @@ this.log.debug("onReady END");
      * Is called when adapter shuts down - callback has to be called under any circumstances!
      * @param {() => void} callback
      */
-    onUnload(callback) {
+    onUnload(/*callback*/) {
         try {
             this.log.info("cleaned everything up...");
             clearInterval(this.refreshTokenInterval);
@@ -2682,9 +2682,11 @@ this.log.debug("onReady END");
             clearInterval(this.updateInterval);
             clearInterval(this.fupdateInterval);
             clearTimeout(this.refreshTokenTimeout);
-            callback();
+            //callback();
+            this.log.debug("onUnloaad: Success");
         } catch (e) {
-            callback();
+            //callback();
+            this.log.error("onUnload: Error");
         }
     }
 
