@@ -242,6 +242,7 @@ class VwWeConnect {
                                             this.getIdStatus(vin).catch(() => {
                                                 this.log.error("get id status Failed");
                                             });
+                                            this.getWcData();
                                         } else {
                                             this.getHomeRegion(vin)
                                                 .catch(() => {
@@ -283,6 +284,7 @@ this.log.debug("before this.updateInterval = setInterval(() => {}");
                                                 this.log.error("get id status Failed");
                                                 this.refreshIDToken();
                                             });
+                                            this.getWcData();
                                         });
                                         return;
                                     } else {
@@ -741,19 +743,48 @@ this.log.debug("onReady END");
 
     getVWToken(tokens, jwtid_token, reject, resolve) {
         if (this.config.type !== "audi") {
-            this.config.atoken = tokens.access_token;
-            this.config.rtoken = tokens.refresh_token;
             if (this.config.type === "id") {
+                if (this.type === "Wc") {
+                    this.config.wc_access_token = tokens.wc_access_token;
+                    this.config.wc_refresh_token = tokens.refresh_token;
+                    this.log.debug("Wallcharging login successfull");
+                    this.getWcData(100);
+                    resolve();
+                    return;
+                }
                 this.config.atoken = tokens.accessToken;
                 this.config.rtoken = tokens.refreshToken;
+
+                //configure for wallcharging login
+
                 this.refreshTokenInterval = setInterval(() => {
                     this.refreshIDToken().catch(() => {});
                 }, 0.9 * 60 * 60 * 1000); // 0.9hours
+
+                //this.config.type === "wc"
+                this.type = "Wc";
+                this.country = "DE";
+                this.clientId = "0fa5ae01-ebc0-4901-a2aa-4dd60572ea0e@apps_vw-dilab_com";
+                this.xclientId = "";
+                this.scope = "openid profile address email";
+                this.redirect = "wecharge://authenticated";
+                this.xrequest = "com.volkswagen.weconnect";
+                this.responseType = "code id_token token";
+                this.xappversion = "";
+                this.xappname = "";
+                this.login().catch(() => {
+                    this.log.warn("Failled wall charger login");
+                });
                 resolve();
                 return;
             }
+
+            this.config.atoken = tokens.access_token;
+            this.config.rtoken = tokens.refresh_token;
             this.refreshTokenInterval = setInterval(() => {
-                this.refreshToken().catch(() => {});
+                this.refreshToken().catch(() => {
+                    this.log.error("Refresh Token was not successful");
+                });
             }, 0.9 * 60 * 60 * 1000); // 0.9hours
         }
         if (this.config.type === "go" || this.config.type === "id") {
@@ -782,7 +813,7 @@ this.log.debug("onReady END");
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
                     err && this.log.error(err);
-                    resp && this.log.error(resp.statusCode);
+                    resp && this.log.error(resp.statusCode.toString());
                     reject();
                     return;
                 }
@@ -791,7 +822,9 @@ this.log.debug("onReady END");
                     this.config.vwatoken = tokens.access_token;
                     this.config.vwrtoken = tokens.refresh_token;
                     this.vwrefreshTokenInterval = setInterval(() => {
-                        this.refreshToken(true).catch(() => {});
+                        this.refreshToken(true).catch(() => {
+                            this.log.error("Refresh Token was not successful");
+                        });
                     }, 0.9 * 60 * 60 * 1000); //0.9hours
                     resolve();
                 } catch (err) {
@@ -1436,7 +1469,7 @@ this.log.debug("onReady END");
         });
         this.log.debug("END getVehicles");
     }
-
+/*
     getChargeRecords() {
         return new Promise((resolve, reject) => {
             this.log.debug("START getChargeRecords");
@@ -1510,6 +1543,207 @@ this.log.debug("onReady END");
                 }
             );
           this.log.debug("END getChargeRecords");
+        });
+    }
+*/
+ getWcData(limit) {
+        if (!limit) {
+            limit = 25;
+        }
+        this.setObjectNotExists("wecharge", {
+            type: "state",
+            common: {
+                name: "WeCharge Data",
+                write: false,
+            },
+            native: {},
+        });
+        const header = {
+            accept: "*/*",
+            "content-type": "application/json",
+            "content-version": "1",
+            "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
+            "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+            "accept-language": "de-de",
+            authorization: "Bearer " + this.config.atoken,
+            wc_access_token: this.config.wc_access_token,
+        };
+        this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/user/subscriptions", header, "wecharge.chargeandpay.subscriptions", [404], "result")
+            .then((body) => {
+                body.forEach((subs) => {
+                    this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/user/tariffs/" + subs.tariff_id, header, "wecharge.chargeandpay.tariffs." + subs.tariff_id, [
+                        404,
+                    ]).catch((hideError) => {
+                        if (hideError) {
+                            this.log.debug("Failed to get tariff");
+                            return;
+                        }
+                        this.log.error("Failed to get tariff");
+                    });
+                });
+            })
+            .catch((hideError) => {
+                if (hideError) {
+                    this.log.debug("Failed to get subscription");
+                    return;
+                }
+                this.log.error("Failed to get subscription");
+            });
+        this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/charging/records?limit=" + limit + "&offset=0", header, "wecharge.chargeandpay.records", [404], "result")
+            .then((body) => {
+                this.setObjectNotExistsAsync("wecharge.chargeandpay.recordsJson", {
+                    type: "state",
+                    common: {
+                        name: "Raw Json Last 100",
+                        role: "indicator",
+                        type: "string",
+                        write: true,
+                        read: true,
+                    },
+                    native: {},
+                })
+                    .then(() => {
+                        this.setState("wecharge.chargeandpay.recordsJson", JSON.stringify(body), true);
+                    })
+                    .catch((error) => {
+                        this.log.error(error);
+                    });
+                this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
+            })
+            .catch((hideError) => {
+                if (hideError) {
+                    this.log.debug("Failed to get chargeandpay records");
+                    return;
+                }
+                this.log.error("Failed to get chargeandpay records");
+            });
+        this.genericRequest("https://wecharge.apps.emea.vwapps.io/home-charging/v1/stations?limit=" + limit, header, "wecharge.homecharging.stations", [404], "result", "stations")
+            .then((body) => {
+                body.forEach((station) => {
+                    this.genericRequest(
+                        "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/sessions?station_id=" + station.id + "&limit=" + limit,
+                        header,
+                        "wecharge.homecharging.stations." + station.name + ".sessions",
+                        [404],
+                        "charging_sessions"
+                    )
+                        .then((body) => {
+                            this.setObjectNotExistsAsync("wecharge.homecharging.stations." + station.name + ".sessionsJson", {
+                                type: "state",
+                                common: {
+                                    name: "Raw Json Last 100",
+                                    role: "indicator",
+                                    type: "string",
+                                    write: true,
+                                    read: true,
+                                },
+                                native: {},
+                            })
+                                .then(() => {
+                                    this.setState("wecharge.homecharging.stations." + station.name + ".sessionsJson", JSON.stringify(body), true);
+                                })
+                                .catch((error) => {
+                                    this.log.error(error);
+                                });
+
+                            this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
+                        })
+                        .catch((hideError) => {
+                            if (hideError) {
+                                this.log.debug("Failed to get sessions");
+                                return;
+                            }
+                            this.log.error("Failed to get sessions");
+                        });
+                });
+            })
+            .catch((hideError) => {
+                if (hideError) {
+                    this.log.debug("Failed to get stations");
+                    return;
+                }
+                this.log.error("Failed to get stations");
+            });
+        const dt = new Date();
+        this.genericRequest(
+            "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/records?start_date_time_after=2020-05-01T00:00:00.000Z&start_date_time_before=" + dt.toISOString() + "&limit=" + limit,
+            header,
+            "wecharge.homecharging.records",
+            [404],
+            "charging_records"
+        )
+            .then((body) => {
+                this.setObjectNotExistsAsync("wecharge.homecharging.recordsJson", {
+                    type: "state",
+                    common: {
+                        name: "Raw Json Last 100",
+                        role: "indicator",
+                        type: "string",
+                        write: true,
+                        read: true,
+                    },
+                    native: {},
+                })
+                    .then(() => {
+                        this.setState("wecharge.homecharging.recordsJson", JSON.stringify(body), true);
+                    })
+                    .catch((error) => {
+                        this.log.error(error);
+                    });
+                this.extractKeys(this, "wecharge.homecharging.records.newesItem", body[0]);
+            })
+            .catch((hideError) => {
+                if (hideError) {
+                    this.log.debug("Failed to get records");
+                    return;
+                }
+                this.log.error("Failed to get records");
+            });
+        //Pay
+        //Home
+    }
+
+    genericRequest(url, header, path, codesToIgnoreArray, selector1, selector2) {
+        return new Promise(async (resolve, reject) => {
+            request.get(
+                {
+                    url: url,
+                    headers: header,
+                    followAllRedirects: true,
+                    gzip: true,
+                    json: true,
+                },
+                (err, resp, body) => {
+                    if (err || (resp && resp.statusCode >= 400)) {
+                        if (resp && resp.statusCode && codesToIgnoreArray.includes(resp.statusCode)) {
+                            err && this.log.debug(err);
+                            resp && this.log.debug(resp.statusCode.toString());
+                            body && this.log.debug(JSON.stringify(body));
+                            reject(true);
+                            return;
+                        }
+                        err && this.log.error(err);
+                        resp && this.log.error(resp.statusCode.toString());
+                        body && this.log.error(JSON.stringify(body));
+                        reject();
+                        return;
+                    }
+                    this.log.debug(JSON.stringify(body));
+                    try {
+                        if (selector1) {
+                            body = body[selector1];
+                            if (selector2) {
+                                body = body[selector2];
+                            }
+                        }
+                        this.extractKeys(this, path, body);
+                        resolve(body);
+                    } catch (err) {
+                        this.log.error(err);
+                        reject();
+                    }
+                }
+            );
         });
     }
 
