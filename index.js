@@ -1542,7 +1542,7 @@ this.log.debug("onReady END");
                         return;
                     }
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
-                    var jsonIdData = JSON.parse(body);
+                    var jsonIdData = body;
                     this.log.debug("SoC = " + jsonIdData.data.batteryStatus.SOC_pct);
                     try {
                         const adapter = this;
