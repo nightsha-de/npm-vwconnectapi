@@ -1469,7 +1469,7 @@ this.log.debug("onReady END");
         });
         this.log.debug("END getVehicles");
     }
-/*
+
     getChargeRecords() {
         return new Promise((resolve, reject) => {
             this.log.debug("START getChargeRecords");
@@ -1545,7 +1545,7 @@ this.log.debug("onReady END");
           this.log.debug("END getChargeRecords");
         });
     }
-*/
+
  getWcData(limit) {
         if (!limit) {
             limit = 25;
