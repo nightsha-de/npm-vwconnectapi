@@ -1543,7 +1543,7 @@ this.log.debug("onReady END");
                     }
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
                     var jsonIdData = body;
-                    this.log.debug("SoC = " + jsonIdData.data.batteryStatus.SOC_pct);
+                    this.log.debug("SoC = " + jsonIdData.data.batteryStatus.currentSOC_pct);
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
