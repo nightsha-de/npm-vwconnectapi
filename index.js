@@ -1542,6 +1542,8 @@ this.log.debug("onReady END");
                         return;
                     }
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
+                    var jsonIdData = JSON.parse(body);
+                    this.log.debug("SoC = " + jsonIdData.data.batteryStatus.SOC_pct);
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
@@ -1577,7 +1579,8 @@ this.log.debug("onReady END");
                                 }
                             }
                         });
-
+                      
+                        this.boolFinishedReading = true;
                         resolve();
                     } catch (err) {
                         this.log.error(err);
@@ -1586,7 +1589,6 @@ this.log.debug("onReady END");
                 }
             );
             this.log.debug("END getIdStatus");
-            this.boolFinishedReading = true;
         });
     }
     
