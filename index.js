@@ -271,7 +271,7 @@ class VwWeConnect {
                                     });
                                 }
 // temporarily removed update stuff, not sure if I'll need it anyway
-/*
+
 this.log.debug("before this.updateInterval = setInterval(() => {}");
                           
                                 this.updateInterval = setInterval(() => {
@@ -310,7 +310,7 @@ this.log.debug("if(this.config.forceinterval > 0)");
                                             });
                                         });
                                     }, this.config.forceinterval * 60 * 1000);
-                                }*/
+                                }
                             })
                             .catch(() => {
                                 this.log.error("Get Vehicles Failed");
