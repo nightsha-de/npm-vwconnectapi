@@ -157,8 +157,8 @@ class VwWeConnect {
 
     // dummy function, normally inherited from ioBroker
     setState(pMessage, pStatus1, pStatus2) {
-      this.statusMessage = pMessage;
-      this.log.debug("setState: <" + pMessage + ">");
+      //this.statusMessage = pMessage;
+      //this.log.debug("setState: <" + pMessage + ">");
     }
 
     /**
