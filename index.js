@@ -3,10 +3,10 @@
 const request = require("request");
 const crypto = require("crypto");
 const { Crypto } = require("@peculiar/webcrypto");
-const uuidv4 = require("uuid/v4");
+const { v4: uuidv4 } = require("uuid");
 const traverse = require("traverse");
 const jsdom = require("jsdom");
-const { resolve } = require("path");
+const { extractKeys } = require("./lib/extractKeys");
 const { JSDOM } = jsdom;
 
 class Log {
