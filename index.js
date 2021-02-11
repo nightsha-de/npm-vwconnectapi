@@ -119,8 +119,8 @@ class VwWeConnect {
 
     // inherited from ioBroker, make it a dummy function for now
     setObjectNotExists(id, object, options, callback) {
-        this.log.debug("id: " + id);
-        this.log.debug("object: " + JSON.stringify(object));
+        //this.log.debug("id: " + id);
+        //this.log.debug("object: " + JSON.stringify(object));
         /*
         if (typeof options === 'function') {
             callback = options;
