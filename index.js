@@ -48,6 +48,7 @@ class VwWeConnect {
         
         this.boolFinishedReading = false;
         this.log = new Log();
+        this.extractKeys = extractKeys;
         this.jar = request.jar();
 
         this.refreshTokenInterval = null;
