@@ -1656,7 +1656,7 @@ this.log.debug("onReady END");
             });
         this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/charging/records?limit=" + limit + "&offset=0", header, "wecharge.chargeandpay.records", [404], "result")
             .then((body) => {
-                this.setObjectNotExistsAsync("wecharge.chargeandpay.recordsJson", {
+                /*this.setObjectNotExistsAsync("wecharge.chargeandpay.recordsJson", {
                     type: "state",
                     common: {
                         name: "Raw Json Last 100",
@@ -1672,8 +1672,9 @@ this.log.debug("onReady END");
                     })
                     .catch((error) => {
                         this.log.error(error);
-                    });
-                this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
+                    });*/
+                //this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
+                this.log.debug("wecharge.chargeandpay.records.newesItem: " + body[0]);
             })
             .catch((hideError) => {
                 if (hideError) {
@@ -1693,7 +1694,7 @@ this.log.debug("onReady END");
                         "charging_sessions"
                     )
                         .then((body) => {
-                            this.setObjectNotExistsAsync("wecharge.homecharging.stations." + station.name + ".sessionsJson", {
+                            /*this.setObjectNotExistsAsync("wecharge.homecharging.stations." + station.name + ".sessionsJson", {
                                 type: "state",
                                 common: {
                                     name: "Raw Json Last 100",
@@ -1709,9 +1710,10 @@ this.log.debug("onReady END");
                                 })
                                 .catch((error) => {
                                     this.log.error(error);
-                                });
+                                });*/
 
-                            this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
+                            //this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
+                           this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + body[0]);
                         })
                         .catch((hideError) => {
                             if (hideError) {
@@ -1738,7 +1740,7 @@ this.log.debug("onReady END");
             "charging_records"
         )
             .then((body) => {
-                this.setObjectNotExistsAsync("wecharge.homecharging.recordsJson", {
+                /*this.setObjectNotExistsAsync("wecharge.homecharging.recordsJson", {
                     type: "state",
                     common: {
                         name: "Raw Json Last 100",
@@ -1754,8 +1756,9 @@ this.log.debug("onReady END");
                     })
                     .catch((error) => {
                         this.log.error(error);
-                    });
-                this.extractKeys(this, "wecharge.homecharging.records.newesItem", body[0]);
+                    });*/
+                //this.extractKeys(this, "wecharge.homecharging.records.newesItem", body[0]);
+                this.log.debug("wecharge.homecharging.records.newesItem: " + body[0]);
             })
             .catch((hideError) => {
                 if (hideError) {
@@ -1801,7 +1804,7 @@ this.log.debug("onReady END");
                                 body = body[selector2];
                             }
                         }
-                        this.extractKeys(this, path, body);
+                        //this.extractKeys(this, path, body);
                         resolve(body);
                     } catch (err) {
                         this.log.error(err);
