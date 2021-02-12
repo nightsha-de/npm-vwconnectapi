@@ -1846,6 +1846,7 @@ this.log.debug("onReady END");
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
                     var jsonIdData = body;
                     this.log.debug("SoC = " + jsonIdData.data.batteryStatus.currentSOC_pct);
+                    this.IdData = jsonIdData;
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
