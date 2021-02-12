@@ -1674,7 +1674,7 @@ this.log.debug("onReady END");
                         this.log.error(error);
                     });*/
                 //this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
-                this.log.debug("wecharge.chargeandpay.records.newesItem: " + body[0]);
+                this.log.debug("wecharge.chargeandpay.records.newesItem: " + JSON.stringify(body));
             })
             .catch((hideError) => {
                 if (hideError) {
@@ -1713,7 +1713,7 @@ this.log.debug("onReady END");
                                 });*/
 
                             //this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
-                           this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + body[0]);
+                           this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + JSON.stringify(body));
                         })
                         .catch((hideError) => {
                             if (hideError) {
@@ -1758,7 +1758,7 @@ this.log.debug("onReady END");
                         this.log.error(error);
                     });*/
                 //this.extractKeys(this, "wecharge.homecharging.records.newesItem", body[0]);
-                this.log.debug("wecharge.homecharging.records.newesItem: " + body[0]);
+                this.log.debug("wecharge.homecharging.records.newesItem: " + JSON.stringify(body));
             })
             .catch((hideError) => {
                 if (hideError) {
@@ -1796,7 +1796,7 @@ this.log.debug("onReady END");
                         reject();
                         return;
                     }
-                    this.log.debug(JSON.stringify(body));
+                    this.log.debug("genericRequest <" + url + ">: " + JSON.stringify(body));
                     try {
                         if (selector1) {
                             body = body[selector1];
