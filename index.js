@@ -51,7 +51,7 @@ class VwWeConnect {
         this.boolFinishChargeAndPay = false;
         this.boolFinishStations = false;      
         this.boolFinishVehicles = false;
-        this.boolCarData = false;
+        this.boolFinishCarData = false;
       
         this.log = new Log();
         this.extractKeys = extractKeys;
@@ -125,14 +125,14 @@ class VwWeConnect {
                      " HomeCharge: " + this.boolFinishHomecharging +
                      " ChargePay: " + this.boolFinishChargeAndPay +
                      " Stat: " + this.boolFinishStations +
-                     " Vehic: " + this.boolFinishVehicles +
-                     " Car: " + this.boolCarData);
+                     /*" Car: " + this.boolFinishCarData*/
+                     " Vehic: " + this.boolFinishVehicles);
       return this.boolFinishIdData
           && this.boolFinishHomecharging
           && this.boolFinishChargeAndPay
           && this.boolFinishStations
-          && this.boolFinishVehicles
-          && this.boolCarData;
+          /*&& this.boolFinishCarData*/
+          && this.boolFinishVehicles;
     }
 
     // inherited from ioBroker, make it a dummy function for now
@@ -188,7 +188,7 @@ class VwWeConnect {
         this.boolFinishChargeAndPay = false;
         this.boolFinishStations = false;      
         this.boolFinishVehicles = false;
-        this.boolCarData = false;
+        this.boolFinishCarData = false;
         // Initialize your adapter here
 
         this.setState("info.connection", false, true);
@@ -1139,7 +1139,7 @@ this.log.debug("onReady END");
                         }
                         this.log.debug("getCarData: " + JSON.stringify(body));
                         this.carData = body;
-                        this.boolCarData = true;
+                        this.boolFinishCarData = true;
                         const data = JSON.parse(body);
                         Object.keys(data).forEach((key) => {
                             this.setObjectNotExists("car." + key, {
@@ -1619,7 +1619,7 @@ this.log.debug("onReady END");
                     });*/
                 //this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
                 this.log.debug("wecharge.chargeandpay.records.newesItem: " + JSON.stringify(body));
-                this.boolFinishChargeAndPayRecords = true;
+                this.boolFinishChargeAndPay = true;
             })
             .catch((hideError) => {
                 if (hideError) {
