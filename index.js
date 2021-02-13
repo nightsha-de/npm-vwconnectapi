@@ -121,6 +121,12 @@ class VwWeConnect {
     }
 
     finishedReading() {
+      this.log.debug(" Id: " + this.boolFinishIdData +
+                     " HomeCharge: " + this.boolFinishHomecharging +
+                     " ChargePay: " + this.boolFinishChargeAndPay +
+                     " Stat: " + this.boolFinishStations +
+                     " Vehic: " + this.boolFinishVehicles +
+                     " Car: " + this.boolCarData);
       return this.boolFinishIdData
           && this.boolFinishHomecharging
           && this.boolFinishChargeAndPay
