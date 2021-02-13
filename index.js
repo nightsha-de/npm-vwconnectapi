@@ -46,7 +46,13 @@ class VwWeConnect {
         //// this.on("message", this.onMessage.bind(this));
         //this.on("unload", this.onUnload.bind(this));
         
-        this.boolFinishedReading = false;
+        this.boolFinishIdData = false;
+        this.boolFinishHomecharging = false;
+        this.boolFinishChargeAndPay = false;
+        this.boolFinishStations = false;      
+        this.boolFinishVehicles = false;
+        this.boolCarData = false;
+      
         this.log = new Log();
         this.extractKeys = extractKeys;
         this.jar = request.jar();
@@ -115,7 +121,12 @@ class VwWeConnect {
     }
 
     finishedReading() {
-      return this.boolFinishedReading;
+      return this.boolFinishIdData
+          && this.boolFinishHomecharging
+          && this.boolFinishChargeAndPay
+          && this.boolFinishStations
+          && this.boolFinishVehicles
+          && this.boolCarData;
     }
 
     // inherited from ioBroker, make it a dummy function for now
@@ -166,10 +177,15 @@ class VwWeConnect {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        this.boolFinishedReading = false;
+        this.boolFinishIdData = false;
+        this.boolFinishHomecharging = false;
+        this.boolFinishChargeAndPay = false;
+        this.boolFinishStations = false;      
+        this.boolFinishVehicles = false;
+        this.boolCarData = false;
         // Initialize your adapter here
 
-       this.setState("info.connection", false, true);
+        this.setState("info.connection", false, true);
         // Reset the connection indicator during startup
         this.type = "VW";
         this.country = "DE";
@@ -290,9 +306,6 @@ class VwWeConnect {
                                         }
                                     });
                                 }
-// temporarily removed update stuff, not sure if I'll need it anyway
-
-this.log.debug("before this.updateInterval = setInterval(() => {}");
                           
                                 this.updateInterval = setInterval(() => {
                                     if (this.config.type === "go") {
@@ -317,7 +330,7 @@ this.log.debug("before this.updateInterval = setInterval(() => {}");
                                         });
                                     }
                                 }, this.config.interval * 60 * 1000);
-this.log.debug("if(this.config.forceinterval > 0)");
+
                                 if (this.config.forceinterval > 0) {
                                     this.fupdateInterval = setInterval(() => {
                                         if (this.config.type === "go") {
@@ -339,10 +352,6 @@ this.log.debug("if(this.config.forceinterval > 0)");
                     .catch(() => {
                         this.log.error("get personal data Failed");
                     });
-                //this.log.info("before getChargeRecords");
-                //this.getChargeRecords();          
-                //this.log.info("after getChargeRecords");
-this.log.debug("onReady end login");
             })
             .catch(() => {
                 this.log.error("Login Failed");
@@ -1123,6 +1132,8 @@ this.log.debug("onReady END");
                             reject();
                         }
                         this.log.debug("getCarData: " + JSON.stringify(body));
+                        this.carData = body;
+                        this.boolCarData = true;
                         const data = JSON.parse(body);
                         Object.keys(data).forEach((key) => {
                             this.setObjectNotExists("car." + key, {
@@ -1204,6 +1215,9 @@ this.log.debug("onReady END");
                             return;
                         }
                         this.log.debug("getVehicles: " + JSON.stringify(body));
+                        this.vehicles = body;
+                        this.boolFinishVehicles = true;
+                      
                         if (this.config.type === "id") {
                             body.data.forEach((element) => {
                                 const vin = element.vin;
@@ -1535,82 +1549,6 @@ this.log.debug("onReady END");
         this.log.debug("END getVehicles");
     }
 
-    getChargeRecords() {
-        return new Promise((resolve, reject) => {
-            this.log.debug("START getChargeRecords");
-            request.get(
-                {
-                    url: "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/records?start_date_time_after=2020-09-24T13:11:51.934Z&start_date_time_before=2021-01-02T14:11:51.934Z&limit=25",
-
-                    headers: {
-                        accept: "*/*",
-                        "content-type": "application/json",
-                        "content-version": "1",
-                        "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
-                        "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
-                        "accept-language": "de-de",
-                        authorization: "Bearer " + this.config.atoken,
-                    },
-                    followAllRedirects: true,
-                    gzip: true,
-                    json: true,
-                },
-                (err, resp, body) => {
-                    if (err || (resp && resp.statusCode >= 400)) {
-                        err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
-
-                        reject();
-                        return;
-                    }
-                    this.log.debug("getChargeRecords: " + JSON.stringify(body));
-                    try {
-                        const adapter = this;
-                        traverse(body.data).forEach(function (value) {
-                            if (this.path.length > 0 && this.isLeaf) {
-                                const modPath = this.path;
-                                this.path.forEach((pathElement, pathIndex) => {
-                                    if (!isNaN(parseInt(pathElement))) {
-                                        let stringPathIndex = parseInt(pathElement) + 1 + "";
-                                        while (stringPathIndex.length < 2) stringPathIndex = "0" + stringPathIndex;
-                                        const key = this.path[pathIndex - 1] + stringPathIndex;
-                                        const parentIndex = modPath.indexOf(pathElement) - 1;
-                                        modPath[parentIndex] = key;
-                                        modPath.splice(parentIndex + 1, 1);
-                                    }
-                                });
-                                if (modPath[modPath.length - 1] !== "$") {
-                                    adapter.setObjectNotExists(vin + ".status." + modPath.join("."), {
-                                        type: "state",
-                                        common: {
-                                            name: this.key,
-                                            role: "indicator",
-                                            type: "mixed",
-                                            write: true,
-                                            read: true,
-                                        },
-                                        native: {},
-                                    });
-
-                                    if (typeof value === "object") {
-                                        value = JSON.stringify(value);
-                                    }
-                                    adapter.setState(vin + ".status." + modPath.join("."), value || this.node, true);
-                                }
-                            }
-                        });
-
-                        resolve();
-                    } catch (err) {
-                        this.log.error(err);
-                        reject();
-                    }
-                }
-            );
-          this.log.debug("END getChargeRecords");
-        });
-    }
-
  getWcData(limit) {
         if (!limit) {
             limit = 25;
@@ -1675,6 +1613,7 @@ this.log.debug("onReady END");
                     });*/
                 //this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
                 this.log.debug("wecharge.chargeandpay.records.newesItem: " + JSON.stringify(body));
+                this.boolFinishChargeAndPayRecords = true;
             })
             .catch((hideError) => {
                 if (hideError) {
@@ -1685,7 +1624,10 @@ this.log.debug("onReady END");
             });
         this.genericRequest("https://wecharge.apps.emea.vwapps.io/home-charging/v1/stations?limit=" + limit, header, "wecharge.homecharging.stations", [404], "result", "stations")
             .then((body) => {
+                this.stations = body;
+                this.boolFinishStations = true;
                 body.forEach((station) => {
+                    this.log.debug("Station: " + station.name + "/" + station.id);
                     this.genericRequest(
                         "https://wecharge.apps.emea.vwapps.io/home-charging/v1/charging/sessions?station_id=" + station.id + "&limit=" + limit,
                         header,
@@ -1713,7 +1655,7 @@ this.log.debug("onReady END");
                                 });*/
 
                             //this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
-                           this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + JSON.stringify(body));
+                           this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + JSON.stringify(body[0]));
                         })
                         .catch((hideError) => {
                             if (hideError) {
@@ -1759,6 +1701,8 @@ this.log.debug("onReady END");
                     });*/
                 //this.extractKeys(this, "wecharge.homecharging.records.newesItem", body[0]);
                 this.log.debug("wecharge.homecharging.records.newesItem: " + JSON.stringify(body));
+                this.homechargingRecords = body;
+                this.boolFinishHomecharging = true;
             })
             .catch((hideError) => {
                 if (hideError) {
@@ -1844,9 +1788,9 @@ this.log.debug("onReady END");
                         return;
                     }
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
-                    var jsonIdData = body;
-                    this.log.debug("SoC = " + jsonIdData.data.batteryStatus.currentSOC_pct);
-                    this.IdData = jsonIdData;
+                    this.IdData = body;
+                    this.boolFinishIdData = true;
+                    
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
@@ -1882,8 +1826,7 @@ this.log.debug("onReady END");
                                 }
                             }
                         });
-                      
-                        this.boolFinishedReading = true;
+
                         resolve();
                     } catch (err) {
                         this.log.error(err);
