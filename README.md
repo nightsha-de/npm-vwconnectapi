@@ -30,7 +30,8 @@ var intervalid = setInterval(function() {
 #### vwConn.stations - List of wallboxes
 
 #### vwConn.homechargingRecords - Charging records of the wallbox
-```[
+```
+[
 {
  "authentication_method":"private_card_owned", // none / private_card_owned / ???
  "authorization_mode":"authorization_csms", // no_authorization_cs / authorization_csms / ???
@@ -53,7 +54,113 @@ var intervalid = setInterval(function() {
 {
 ...more records...
 }
-]```
+]
+```
 #### vwConn.IdData - Car data for the IDs
+```
+{
+  "data": {
+    "batteryStatus": {
+      "carCapturedTimestamp":"2021-02-13T10:38:00Z",
+      "currentSOC_pct":64,
+      "cruisingRangeElectric_km":189
+    },
+    "chargingStatus": {
+      "carCapturedTimestamp":"2021-02-13T10:38:00Z",
+      "remainingChargingTimeToComplete_min":0,
+      "chargingState":"readyForCharging",
+      "chargePower_kW":0,
+      "chargeRate_kmph":0
+    },
+    "chargingSettings": {
+      "carCapturedTimestamp":"2021-02-13T10:37:20Z",
+      "maxChargeCurrentAC":"maximum",
+      "autoUnlockPlugWhenCharged":"off",
+      "targetSOC_pct":80
+    },
+    "plugStatus": {
+      "carCapturedTimestamp":"2021-02-13T10:38:04Z",
+      "plugConnectionState":"disconnected",
+      "plugLockState":"unlocked"
+    },
+    "climatisationStatus": {
+      "carCapturedTimestamp":"2021-02-13T10:37:22Z",
+      "remainingClimatisationTime_min":0,
+      "climatisationState":"off"
+    },
+    "climatisationSettings": {
+      "carCapturedTimestamp":"2021-02-13T10:37:22Z",
+      "targetTemperature_K":295.15,
+      "targetTemperature_C":22,
+      "climatisationWithoutExternalPower":true,
+      "climatizationAtUnlock":false,
+      "windowHeatingEnabled":false,
+      "zoneFrontLeftEnabled":false,
+      "zoneFrontRightEnabled":false,
+      "zoneRearLeftEnabled":false,
+      "zoneRearRightEnabled":false
+    },
+    "climatisationTimer": {
+      "timers": [
+        {
+          "id":1,
+          "enabled":false,
+          "singleTimer": {"startDateTime":"1999-12-31T23:00:00Z"}
+        },
+        {
+          "id":2,
+          "enabled":false,
+          "singleTimer": {"startDateTime":"1999-12-31T23:00:00Z"}
+        }
+      ],
+      "carCapturedTimestamp":"2021-02-13T10:37:17.203Z",
+      "timeInCar":"2021-02-13T11:37:17+01:00"
+    },
+    "windowHeatingStatus": {
+      "carCapturedTimestamp":"2021-02-13T10:38:03Z",
+      "windowHeatingStatus": [
+        {
+        "windowLocation":"front", "windowHeatingState":"off"
+        },
+        {
+        "windowLocation":"rear", "windowHeatingState":"off"
+        }
+      ]
+    },
+    "rangeStatus": {
+      "carCapturedTimestamp":"2021-02-13T10:38:00Z",
+      "carType":"electric",
+      "primaryEngine": {
+        "type":"electric",
+        "currentSOC_pct":67,
+        "remainingRange_km":199
+      },
+      "totalRange_km":199
+    },
+    "capabilityStatus": {
+      "capabilities": [
+        {"id":"access", "status":[1008], "userDisablingAllowed":false },
+        {"id":"automation", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true},
+        {"id":"charging","expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"chargingStations","status":[4001],"expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"climatisation","expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"destinations","expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"fuelStatus","userDisablingAllowed":false},
+        {"id":"ignition","status":[1008],"userDisablingAllowed":false},
+        {"id":"mapUpdate","status":[4001],"expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"measurements","status":[1008],"userDisablingAllowed":false},
+        {"id":"onlineSpeech","expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"parkingPosition","status":[1008],"userDisablingAllowed":false},
+        {"id":"routing","expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"state","status":[1008],"userDisablingAllowed":false},
+        {"id":"trafficInformation","status":[4001],"expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true},
+        {"id":"vehicleLights","status":[1008],"userDisablingAllowed":false},
+        {"id":"webRadio","expirationDate":"2024-01-11T00:00:00Z","userDisablingAllowed":true}
+      ]
+    }
+  },
+  "error": {}
+}
+```
 
 #### vwConn.carData - Car data for all others? Can't test it.
