@@ -42,7 +42,7 @@ class VwWeConnect {
         pin: "123",
         type: "id",
         interval: 10,
-        forceinterval: 360,
+        forceinterval: 0,
         numberOfTrips: 1,
         logLevel: "ERROR"
     }
@@ -68,7 +68,7 @@ class VwWeConnect {
         this.refreshTokenInterval = null;
         this.vwrefreshTokenInterval = null;
         this.updateInterval = null;
-        this.fupdateInterval = null;
+        this.fupdateInterval = 0; // set force update interval to 0 => deactivated;
         this.refreshTokenTimeout = null;
 
         this.homeRegion = "https://msg.volkswagen.de";
@@ -173,7 +173,7 @@ class VwWeConnect {
         this.config.pin = pPin;
         //this.config.type = "id";
         //this.config.interval = 10;
-        //this.config.forceinterval = 360;
+        //this.config.forceinterval = 360; // shouldn't be smaller than 360mins, default 0 (off)
         //this.config.numberOfTrips = 1;
     }
     
