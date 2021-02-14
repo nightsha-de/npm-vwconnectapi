@@ -192,10 +192,7 @@ class VwWeConnect {
       //this.log.debug("setState: <" + pMessage + ">");
     }
 
-    /**
-     * Is called when databases are connected and adapter received configuration.
-     */
-    async onReady() {
+    async getData() {
         this.boolFinishIdData = false;
         this.boolFinishHomecharging = false;
         this.boolFinishChargeAndPay = false;
@@ -375,7 +372,7 @@ class VwWeConnect {
             .catch(() => {
                 this.log.error("Login Failed");
             });
-this.log.debug("onReady END");
+this.log.debug("getData END");
       // removed, was inherited from ioBroker?
       // this.subscribeStates("*");
     }
@@ -1022,7 +1019,7 @@ this.log.debug("onReady END");
                 resolve();
                 return;
             }
-            this.log.debug("getData");
+            this.log.debug("getPersonalData");
             request.get(
                 {
                     url: "https://customer-profile.apps.emea.vwapps.io/v1/customers/" + this.config.userid + "/personalData",
