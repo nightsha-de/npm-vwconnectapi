@@ -10,12 +10,16 @@ const { extractKeys } = require("./lib/extractKeys");
 const { JSDOM } = jsdom;
 
 class Log {
-  constructor() {
+  constructor(logLevel) {
+    this.logLevel = logLevel;
     console.log("Start logging instance");
   }
   
   debug(pMessage) {
-    console.log("DEBUG: " + pMessage);
+    if (this.logLevel == "DEBUG")
+    {
+      console.log("DEBUG: " + pMessage);
+    }
   }
     
   error(pMessage) {
@@ -23,7 +27,10 @@ class Log {
   }
   
   info(pMessage) {
-    console.log("INFO:  " + pMessage);
+    if (this.logLevel == "DEBUG" || this.logLevel == "INFO")
+    {    
+      console.log("INFO:  " + pMessage);
+    }
   }
 }
 
@@ -36,7 +43,8 @@ class VwWeConnect {
         type: "id",
         interval: 10,
         forceinterval: 360,
-        numberOfTrips: 1
+        numberOfTrips: 1,
+        logLevel: "ERROR"
     }
     
     constructor() {
@@ -53,7 +61,7 @@ class VwWeConnect {
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
       
-        this.log = new Log();
+        this.log = new Log(this.config.logLevel);
         this.extractKeys = extractKeys;
         this.jar = request.jar();
 
@@ -171,6 +179,11 @@ class VwWeConnect {
     
     setConfig(pType) {
       this.config.type = pType;
+    }
+
+    // logLevel: ERROR, INFO, DEBUG
+    setLogLevel(logLevel) {
+      this.config.logLevel = logLevel;
     }
 
     // dummy function, normally inherited from ioBroker
