@@ -1804,7 +1804,7 @@ this.log.debug("getData END");
                         return;
                     }
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
-                    this.IdData = body;
+                    this.idData = body;
                     this.boolFinishIdData = true;
                     
                     try {
