@@ -1,5 +1,7 @@
 "use strict";
 
+// latest checked version of ioBroker.vw-connect: V0.0.29 // https://github.com/TA2k/ioBroker.vw-connect/commit/549c7976690de4768cde80a38707d5e4190e6984
+
 const request = require("request");
 const crypto = require("crypto");
 const { Crypto } = require("@peculiar/webcrypto");
