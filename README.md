@@ -62,8 +62,8 @@ var intervalid = setInterval(function() {
   "data": {
     "batteryStatus": {
       "carCapturedTimestamp":"2021-02-13T10:38:00Z",
-      "currentSOC_pct":64,
-      "cruisingRangeElectric_km":189
+      "currentSOC_pct":67,
+      "cruisingRangeElectric_km":199
     },
     "chargingStatus": {
       "carCapturedTimestamp":"2021-02-13T10:38:00Z",
