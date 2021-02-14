@@ -4,18 +4,14 @@ NPM package for a VW Connect API based on https://github.com/TA2k/ioBroker.vw-co
 
 ### Example:
 
+```javascript
 const api = require('npm-vwconnectapi');
-
 var log = new api.Log();
-
 var vwConn = new api.VwWeConnect();
-
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
-
 vwConn.setConfig("id"); // type
-
 vwConn.onReady()
-
+```
 
 ### Objects supplied by the API:
 
@@ -24,7 +20,7 @@ vwConn.onReady()
 #### vwConn.stations - List of wallboxes
 
 #### vwConn.homechargingRecords - Charging records of the wallbox
-[
+```[
 {
  "authentication_method":"private_card_owned", // none / private_card_owned / ???
  "authorization_mode":"authorization_csms", // no_authorization_cs / authorization_csms / ???
@@ -47,7 +43,7 @@ vwConn.onReady()
 {
 ...more records...
 }
-]
+]```
 #### vwConn.IdData - Car data for the IDs
 
 #### vwConn.carData - Car data for all others? Can't test it.
