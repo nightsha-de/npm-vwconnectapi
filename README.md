@@ -10,12 +10,21 @@ var log = new api.Log();
 var vwConn = new api.VwWeConnect();
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
 vwConn.setConfig("id"); // type
-vwConn.onReady()
+vwConn.getData()
 
 var intervalid = setInterval(function() {
   if (vwConn.finishedReading())
   {
+    // log State of Charge
     log.info("State of Charge: " + vwConn.IdData.data.batteryStatus.currentSOC_pct + "%");
+    
+    log.info("Charging records:");
+    vwConn.homechargingRecords.forEach((record) =>
+      {
+        log.info(record.start_date_time + ": " + record.total_energy_wh/1000 + "kWh");
+      }
+    );
+    
     vwConn.onUnload();
     process.exit(1);
   }
