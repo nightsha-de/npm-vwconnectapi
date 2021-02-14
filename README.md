@@ -11,6 +11,16 @@ var vwConn = new api.VwWeConnect();
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
 vwConn.setConfig("id"); // type
 vwConn.onReady()
+
+var intervalid = setInterval(function() {
+  if (vwConn.finishedReading())
+  {
+    log.info("State of Charge: " + vwConn.IdData.data.batteryStatus.currentSOC_pct + "%");
+    vwConn.onUnload();
+    process.exit(1);
+  }
+  log.info("Waiting for data ...");
+}, 1000);
 ```
 
 ### Objects supplied by the API:
