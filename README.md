@@ -26,8 +26,60 @@ var intervalid = setInterval(function() {
 ### Objects supplied by the API:
 
 #### vwConn.vehicles - List of vehicles
+```
+{
+  "data": [
+  {
+    "vin":"WVWZZZE1ZMP123456",
+    "role":"PRIMARY_USER",
+    "enrollmentStatus":"COMPLETED",
+    "model":"test",
+    "nickname":"ID.3",
+    "capabilities": [
+      { "id":"access", "status":[1008], "userDisablingAllowed":false },
+      { "id":"automation", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"charging", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true},
+      { "id":"chargingStations", "status":[4001], "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true},
+      { "id":"climatisation", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"destinations", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"fuelStatus", "userDisablingAllowed":false },
+      { "id":"ignition", "status":[1008], "userDisablingAllowed":false },
+      { "id":"mapUpdate", "status":[4001], "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"measurements", "status":[1008], "userDisablingAllowed":false },
+      { "id":"onlineSpeech", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"parkingPosition", "status":[1008], "userDisablingAllowed":false },
+      { "id":"routing", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"state", "status":[1008], "userDisablingAllowed":false },
+      { "id":"trafficInformation", "status":[4001], "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true },
+      { "id":"vehicleLights", "status":[1008], "userDisablingAllowed":false },
+      { "id":"webRadio", "expirationDate":"2024-01-11T00:00:00Z", "userDisablingAllowed":true }
+    ],
+    "images": {}
+  }
+  ]
+}
+```
 
 #### vwConn.stations - List of wallboxes
+```
+[
+{
+  "connection_state":"connected",
+  "connectors": [
+    {
+    "availability":"available",
+    "id":"1"
+    }
+  ],
+  "id": "asdfd-asdf-asdf-abbd-dfasfasdfsdf",
+  "last_contact":"2021-02-14T14:36:16.815Z",
+  "lifecycle_state":"activated",
+  "name":"Zuhause",
+  "authorization_mode":"authorization_csms",
+  "model":"EVBOX_MGWB"
+}
+]
+```
 
 #### vwConn.homechargingRecords - Charging records of the wallbox
 ```
