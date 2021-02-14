@@ -16,7 +16,7 @@ var intervalid = setInterval(function() {
   if (vwConn.finishedReading())
   {
     // log State of Charge
-    log.info("State of Charge: " + vwConn.IdData.data.batteryStatus.currentSOC_pct + "%");
+    log.info("State of Charge: " + vwConn.idData.data.batteryStatus.currentSOC_pct + "%");
     
     log.info("Charging records:");
     vwConn.homechargingRecords.forEach((record) =>
@@ -117,7 +117,7 @@ var intervalid = setInterval(function() {
 }
 ]
 ```
-#### vwConn.IdData - Car data for the IDs
+#### vwConn.idData - Car data for the IDs
 ```
 {
   "data": {
