@@ -1,6 +1,6 @@
 "use strict";
 
-// latest checked version of ioBroker.vw-connect: V0.0.29 // https://github.com/TA2k/ioBroker.vw-connect/commit/549c7976690de4768cde80a38707d5e4190e6984
+// latest checked version of ioBroker.vw-connect: V0.0.30 // https://github.com/TA2k/ioBroker.vw-connect/commit/2286fd9f071664df8012e93864dda1e9d637465c
 
 const request = require("request");
 const crypto = require("crypto");
