@@ -357,9 +357,7 @@ class VwWeConnect {
             .catch(() => {
                 this.log.error("Login Failed");
             });
-this.log.debug("getData END");
-      // removed, was inherited from ioBroker?
-      // this.subscribeStates("*");
+        this.log.debug("getData END");
     }
     
     login() {
@@ -1361,7 +1359,6 @@ this.log.debug("getData END");
             "charging_records"
         )
             .then((body) => {
-                //this.extractKeys(this, "wecharge.homecharging.records.newesItem", body[0]);
                 this.log.debug("wecharge.homecharging.records.newesItem: " + JSON.stringify(body));
                 this.homechargingRecords = body;
                 this.boolFinishHomecharging = true;
@@ -1410,7 +1407,6 @@ this.log.debug("getData END");
                                 body = body[selector2];
                             }
                         }
-                        //this.extractKeys(this, path, body);
                         resolve(body);
                     } catch (err) {
                         this.log.error(err);
@@ -1487,7 +1483,7 @@ this.log.debug("getData END");
         });
     }
     
-    async setIdRemote(vin, action, value, bodyContent) {
+    setIdRemote(vin, action, value, bodyContent) {
         return new Promise(async (resolve, reject) => {
             const pre = this.name + "." + this.instance;
             let body = bodyContent || {};
@@ -1531,8 +1527,17 @@ this.log.debug("getData END");
                 },
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
+                        if (resp && resp.statusCode === 401) {
+                            err && this.log.error(err);
+                            resp && this.log.error(resp.statusCode.toString());
+                            body && this.log.error(JSON.stringify(body));
+                            this.refreshIDToken().catch(() => {});
+                            this.log.error("Refresh Token");
+                            reject();
+                            return;
+                        }
                         err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
+                        resp && this.log.error(resp.statusCode.toString());
                         body && this.log.error(JSON.stringify(body));
                         reject();
                         return;
@@ -1551,6 +1556,7 @@ this.log.debug("getData END");
     
     refreshIDToken() {
         return new Promise((resolve, reject) => {
+            this.log.debug("Token Refresh started");
             request.get(
                 {
                     url: "https://login.apps.emea.vwapps.io/refresh/v1",
@@ -1571,15 +1577,35 @@ this.log.debug("getData END");
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
                         err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
-
+                        resp && this.log.error(resp.statusCode.toString());
+                        body && this.log.error(JSON.stringify(body));
+                        this.log.error("Failed refresh token. Relogin");
+                        //reset login parameters because of wecharge
+                        this.type = "Id";
+                        this.clientId = "a24fba63-34b3-4d43-b181-942111e6bda8@apps_vw-dilab_com";
+                        this.scope = "openid profile badge cars dealers birthdate vin";
+                        this.redirect = "weconnect://authenticated";
+                        this.xrequest = "com.volkswagen.weconnect";
+                        this.responseType = "code id_token token";
+                        setTimeout(() => {
+                            this.log.error("Relogin");
+                            this.login().catch(() => {
+                                this.log.error("Failed relogin");
+                            });
+                        }, 1 * 60 * 1000);
                         reject();
                         return;
                     }
                     try {
+                        this.log.debug("Token Refresh successful");
                         this.config.atoken = body.accessToken;
                         this.config.rtoken = body.refreshToken;
-
+                        if (this.type === "Wc") {
+                            //wallcharging relogin no refresh token available
+                            this.login().catch(() => {
+                                this.log.debug("Failed wallcharge login");
+                            });
+                        }
                         resolve();
                     } catch (err) {
                         this.log.error(err);
@@ -1602,7 +1628,7 @@ this.log.debug("getData END");
                 url = this.replaceVarInUrl("https://msg.volkswagen.de/fs-car/promoter/portfolio/v1/$type/$country/vehicle/$vin/carportdata", vin);
                 accept = "application/json";
             }
-            let atoken = this.config.vwatoken;
+            const atoken = this.config.vwatoken;
 
             request.get(
                 {
@@ -1622,15 +1648,17 @@ this.log.debug("getData END");
                 },
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
+                        if (resp && resp.statusCode === 429) {
+                            this.log.error("Too many requests. Please turn on your car to send new requests. Maybe force update/update erzwingen is too often.");
+                        }
                         err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
+                        resp && this.log.error(resp.statusCode.toString());
                         body && this.log.error(JSON.stringify(body));
                         reject();
                         return;
                     }
                     try {
-                        this.log.debug("getVehicleData: " + JSON.stringify(body));
-                        const adapter = this;
+                        this.log.debug(JSON.stringify(body));
                         let result = body.vehicleData;
                         if (!result) {
                             result = body.vehicleDataDetail;
@@ -1643,25 +1671,11 @@ this.log.debug("getData END");
                                 return;
                             }
                         }
-                        traverse(result).forEach(function (value) {
-                            if (this.path.length > 0 && this.isLeaf) {
-                                const modPath = this.path;
-                                this.path.forEach((pathElement, pathIndex) => {
-                                    if (!isNaN(parseInt(pathElement))) {
-                                        let stringPathIndex = parseInt(pathElement) + 1 + "";
-                                        while (stringPathIndex.length < 2) stringPathIndex = "0" + stringPathIndex;
-                                        const key = this.path[pathIndex - 1] + stringPathIndex;
-                                        const parentIndex = modPath.indexOf(pathElement) - 1;
-                                        modPath[parentIndex] = key;
-                                        modPath.splice(parentIndex + 1, 1);
-                                    }
-                                });
+                        if (result && result.carportData && result.carportData.modelName) {
+                            this.updateName(vin, result.carportData.modelName);
+                        }
 
-                                if (typeof value === "object") {
-                                    value = JSON.stringify(value);
-                                }
-                            }
-                        });
+                        this.extractKeys(this, vin + ".general", result);
 
                         resolve();
                     } catch (err) {
@@ -1702,8 +1716,11 @@ this.log.debug("getData END");
                 },
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
+                        if (resp && resp.statusCode === 429) {
+                            this.log.error("Too many requests. Please turn on your car to send new requests. Maybe force update/update erzwingen is too often.");
+                        }
                         err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
+                        resp && this.log.error(resp.statusCode.toString());
                         reject();
                         return;
                     }
@@ -1779,14 +1796,17 @@ this.log.debug("getData END");
                     (err, resp, body) => {
                         if (err || (resp && resp.statusCode >= 400)) {
                             this.log.error(vin);
+                            if (resp && resp.statusCode === 429) {
+                                this.log.error("Too many requests. Please turn on your car to send new requests. Maybe force update/update erzwingen is too often.");
+                            }
                             err && this.log.error(err);
-                            resp && this.log.error(resp.statusCode);
+                            resp && this.log.error(resp.statusCode.toString());
                             body && this.log.error(JSON.stringify(body));
                             reject();
                             return;
                         }
                         try {
-                            this.log.debug("requestStatusUpdate: " + JSON.stringify(body));
+                            this.log.debug(JSON.stringify(body));
                             resolve();
                         } catch (err) {
                             this.log.error(vin);
@@ -2071,110 +2091,6 @@ this.log.debug("getData END");
         return result;
     }
 
-    getTripKeys(tripJson) {
-        const adapter = this;
-        const maxCount = this.config.numberOfTrips;
-        var result = null;
-        if (tripJson && tripJson.tripData) {
-            if (Array.isArray(tripJson.tripData)) {
-                var bestShort = [];
-                var bestLong = [];
-                var bestCycle = [];
-                // select and sort newest tripData
-                tripJson.tripData.forEach(function (tripValue, tripIndex) {
-                    if (tripValue && tripValue.tripType && tripValue.tripID) {
-                        if (tripValue.tripType === "shortTerm") {
-                            var found = false;
-                            bestShort.forEach(function (value, index) {
-                                if (!found && tripValue.tripID > value) {
-                                    bestShort.splice(index, 0, tripValue.tripID);
-                                    found = true;
-                                }
-                            });
-                            if (!found && (maxCount == 0 || bestShort.length < maxCount)) {
-                                bestShort.push(tripValue.tripID);
-                            } else if (maxCount > 0 && bestShort.length > maxCount) {
-                                bestShort.pop();
-                            }
-                        } else if (tripValue.tripType === "longTerm") {
-                            var found = false;
-                            bestLong.forEach(function (value, index) {
-                                if (!found && tripValue.tripID > value) {
-                                    bestLong.splice(index, 0, tripValue.tripID);
-                                    found = true;
-                                }
-                            });
-                            if (!found && (maxCount == 0 || bestLong.length < maxCount)) {
-                                bestLong.push(tripValue.tripID);
-                            } else if (maxCount > 0 && bestLong.length > maxCount) {
-                                bestLong.pop();
-                            }
-                        } else if (tripValue.tripType === "cyclic") {
-                            var found = false;
-                            bestCycle.forEach(function (value, index) {
-                                if (!found && tripValue.tripID > value) {
-                                    bestCycle.splice(index, 0, tripValue.tripID);
-                                    found = true;
-                                }
-                            });
-                            if (!found && (maxCount == 0 || bestCycle.length < maxCount)) {
-                                bestCycle.push(tripValue.tripID);
-                            } else if (maxCount > 0 && bestCycle.length > maxCount) {
-                                bestCycle.pop();
-                            }
-                        } else {
-                            adapter.log.warn("unknown tripType: " + tripValue.tripType);
-                            adapter.log.debug(JSON.stringify(tripValue));
-                        }
-                    } else {
-                        adapter.log.warn("tripData has not tripType and tripID");
-                        adapter.log.debug(JSON.stringify(tripValue));
-                    }
-                });
-                //adapter.log.info("bestShort: " + JSON.stringify(bestShort));
-                //adapter.log.info("bestLong: " + JSON.stringify(bestLong));
-                //adapter.log.info("bestCycle: " + JSON.stringify(bestCycle));
-                // build keys for tripData
-                result = new Array(tripJson.tripData.length);
-                tripJson.tripData.forEach(function (tripValue, tripIndex) {
-                    result[tripIndex] = null;
-                    if (tripValue && tripValue.tripType && tripValue.tripID) {
-                        if (tripValue.tripType === "shortTerm") {
-                            var index = bestShort.indexOf(tripValue.tripID);
-                            if (index >= 0) {
-                                result[tripIndex] = index + 1 + "";
-                                while (result[tripIndex].length < 3) result[tripIndex] = "0" + result[tripIndex];
-                                result[tripIndex] = "short" + result[tripIndex];
-                            }
-                        } else if (tripValue.tripType === "longTerm") {
-                            var index = bestLong.indexOf(tripValue.tripID);
-                            if (index >= 0) {
-                                result[tripIndex] = index + 1 + "";
-                                while (result[tripIndex].length < 3) result[tripIndex] = "0" + result[tripIndex];
-                                result[tripIndex] = "long" + result[tripIndex];
-                            }
-                        } else if (tripValue.tripType === "cyclic") {
-                            var index = bestCycle.indexOf(tripValue.tripID);
-                            if (index >= 0) {
-                                result[tripIndex] = index + 1 + "";
-                                while (result[tripIndex].length < 3) result[tripIndex] = "0" + result[tripIndex];
-                                result[tripIndex] = "cycle" + result[tripIndex];
-                            }
-                        }
-                    }
-                });
-            } else {
-                adapter.log.warn("tripData is not an array");
-                adapter.log.debug(JSON.stringify(tripJson.tripData));
-            }
-        } else {
-            adapter.log.warn("tripdata without tripData field");
-            adapter.log.debug(JSON.stringify(tripJson));
-        }
-        adapter.log.debug(JSON.stringify(result));
-        return result;
-    }
-
     updateUnit(pathString, unit) {
         const adapter = this;
         this.getObject(pathString, function (err, obj) {
@@ -2239,19 +2155,23 @@ this.log.debug("getData END");
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
                         err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
+                        resp && this.log.error(resp.statusCode.toString());
+                        body && this.log.error(body);
                         reject();
                         return;
                     }
                     try {
-                        this.log.debug(body);
+                        this.log.debug(JSON.stringify(body));
                         if (body.indexOf("<error>") !== -1) {
                             this.log.error("Error response try to refresh token " + url);
                             this.log.error(JSON.stringify(body));
-                            this.refreshToken(true);
+                            this.refreshToken(true).catch(() => {
+                                this.log.error("Refresh Token was not successful");
+                            });
                             reject();
                             return;
                         }
+                        resolve();
                         this.log.info(body);
                     } catch (err) {
                         this.log.error(err);
@@ -2266,7 +2186,7 @@ this.log.debug("getData END");
     setVehicleStatusv2(vin, url, body, contentType, secToken) {
         return new Promise((resolve, reject) => {
             url = this.replaceVarInUrl(url, vin);
-            this.log.debug(body);
+            this.log.debug(JSON.stringify(body));
             this.log.debug(contentType);
             const headers = {
                 "User-Agent": "okhttp/3.7.0",
@@ -2293,16 +2213,18 @@ this.log.debug("getData END");
                 (err, resp, body) => {
                     if (err || (resp && resp.statusCode >= 400)) {
                         err && this.log.error(err);
-                        resp && this.log.error(resp.statusCode);
+                        resp && this.log.error(resp.statusCode.toString());
                         reject();
                         return;
                     }
                     try {
-                        this.log.debug(body);
+                        this.log.debug(JSON.stringify(body));
                         if (body.indexOf("<error>") !== -1) {
                             this.log.error("Error response try to refresh token " + url);
                             this.log.error(JSON.stringify(body));
-                            this.refreshToken(true);
+                            this.refreshToken(true).catch(() => {
+                                this.log.error("Refresh Token was not successful");
+                            });
                             reject();
                             return;
                         }
@@ -2521,269 +2443,6 @@ this.log.debug("getData END");
         } catch (e) {
             //callback();
             this.log.error("onUnload: Error");
-        }
-    }
-
-    /**
-     * Is called if a subscribed state changes
-     * @param {string} id
-     * @param {ioBroker.State | null | undefined} state
-     */
-    async onStateChange(id, state) {
-        try {
-            if (state) {
-                if (!state.ack) {
-                    const vin = id.split(".")[2];
-                    let body = "";
-                    let contentType = "";
-                    if (id.indexOf("remote") !== -1) {
-                        const action = id.split(".")[4];
-                        if (action === "batterycharge") {
-                            body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>start</type>\n</action>';
-                            if (state.val === false) {
-                                body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>stop</type>\n</action>';
-                            }
-                            contentType = "application/vnd.vwg.mbb.ChargerAction_v1_0_0+xml";
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/batterycharge/v1/$type/$country/vehicles/$vin/charger/actions", body, contentType).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-                        if (action === "charging") {
-                            if (this.config.type === "id") {
-                                const value = state.val ? "start" : "stop";
-                                this.setIdRemote(vin, action, value).catch(() => {
-                                    this.log.error("failed set state " + action);
-                                });
-                                return;
-                            }
-                        }
-                        if (action === "targetSOC") {
-                            if (this.config.type === "id") {
-                                const pre = this.name + "." + this.instance;
-                                const climateStates = await this.getStatesAsync(pre + "." + vin + ".status.chargingSettings.*");
-                                let body = {};
-                                const allIds = Object.keys(climateStates);
-                                allIds.forEach((keyName) => {
-                                    const key = keyName.split(".").splice(-1)[0];
-                                    if (key.indexOf("Timestamp") === -1) {
-                                        body[key] = climateStates[keyName].val;
-                                    }
-                                });
-                                body["targetSOC_pct"] = state.val;
-                                this.setIdRemote(vin, "charging", "settings", body).catch(() => {
-                                    this.log.error("failed set state " + action);
-                                });
-                                return;
-                            }
-                        }
-                        if (action === "climatisation") {
-                            if (this.config.type === "id") {
-                                const value = state.val ? "start" : "stop";
-                                this.setIdRemote(vin, action, value).catch(() => {
-                                    this.log.error("failed set state " + action);
-                                });
-                                return;
-                            } else {
-                                body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>startClimatisation</type>\n</action>';
-                                if (state.val === false) {
-                                    body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>stopClimatisation</type>\n</action>';
-                                }
-                                contentType = "application/vnd.vwg.mbb.ClimaterAction_v1_0_0+xml";
-                                this.setVehicleStatus(vin, "$homeregion/fs-car/bs/climatisation/v1/$type/$country/vehicles/$vin/climater/actions", body, contentType).catch(() => {
-                                    this.log.error("failed set state");
-                                });
-                            }
-                        }
-
-                        if (action === "ventilation" || action === "ventilationv2") {
-                            const idArray = id.split(".");
-                            idArray.pop();
-                            idArray.push(action + "Duration");
-                            const ventilationDurationPath = idArray.join(".");
-                            const durationState = await this.getStateAsync(ventilationDurationPath);
-                            let duration = 30;
-                            if (durationState && durationState.val) {
-                                duration = durationState.val;
-                            }
-                            let body =
-                                '<?xml version="1.0" encoding= "UTF-8" ?>\n<performAction xmlns="http://audi.de/connect/rs">\n   <quickstart>\n      <active>true</active>\n<climatisationDuration>' +
-                                duration +
-                                "</climatisationDuration>\n	<startMode>" +
-                                action +
-                                "</startMode></quickstart>\n</performAction>";
-                            if (state.val === false) {
-                                body =
-                                    '<?xml version="1.0" encoding= "UTF-8" ?>\n<performAction xmlns="http://audi.de/connect/rs">\n   <quickstop>\n      <active>false</active>\n   </quickstop>\n</performAction>';
-                            }
-                            contentType = "application/vnd.vwg.mbb.RemoteStandheizung_v2_0_2+xml";
-                            if (action === "ventilationv2") {
-                                body = '{"performAction":{"quickstart":{"startMode":"ventilation","active":true,"climatisationDuration":' + duration + "}}}";
-                                if (state.val === false) {
-                                    body = '{"performAction":{"quickstop":{"active":false}}}';
-                                }
-                                contentType = "application/vnd.vwg.mbb.RemoteStandheizung_v2_0_2+json";
-                            }
-
-                            const secToken = await this.requestSecToken(vin, "rheating_v1/operations/P_QSACT");
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/rs/v1/$type/$country/vehicles/$vin/action", body, contentType, secToken).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-
-                        if (action === "climatisationTemperature") {
-                            let temp = 2950;
-                            if (state.val && !isNaN(state.val)) {
-                                temp = (parseFloat(state.val) + 273, 6) * 10;
-                            }
-                            body =
-                                '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>setSettings</type> <settings> <targetTemperature>' +
-                                temp +
-                                "</targetTemperature> <climatisationWithoutHVpower>false</climatisationWithoutHVpower> <heaterSource>electric</heaterSource> </settings>\n</action>";
-                            contentType = "application/vnd.vwg.mbb.ClimaterAction_v1_0_0+xml";
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/climatisation/v1/$type/$country/vehicles/$vin/climater/actions", body, contentType).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-
-                        if (action === "windowheating") {
-                            body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>startWindowHeating</type>\n</action>';
-                            if (state.val === false) {
-                                body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<action>\n   <type>stopWindowHeating</type>\n</action>';
-                            }
-                            contentType = "application/vnd.vwg.mbb.ClimaterAction_v1_0_0+xml";
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/climatisation/v1/$type/$country/vehicles/$vin/climater/actions", body, contentType).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-                        if (action === "flash") {
-                            //HONK_AND_FLASH
-                            const idArray = id.split(".");
-                            idArray.pop();
-                            idArray.pop();
-                            idArray.push("position.carCoordinate");
-                            const posId = idArray.join(".");
-                            const longitude = await this.getStateAsync(posId + ".longitude");
-                            const latitude = await this.getStateAsync(posId + ".latitude");
-                            if (!longitude || !latitude) {
-                                this.log.info("No Location available, location information needed for this action");
-                                return;
-                            }
-                            body = '{"honkAndFlashRequest":{"serviceOperationCode":"FLASH_ONLY","userPosition":{"latitude":' + latitude.val + ',"longitude":' + longitude.val + "}}}";
-                            contentType = "application/json; charset=UTF-8";
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/rhf/v1/$type/$country/vehicles/$vin/honkAndFlash", body, contentType).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-
-                        if (action === "honk") {
-                            //
-                            const idArray = id.split(".");
-                            idArray.pop();
-                            idArray.pop();
-                            idArray.push("position.carCoordinate");
-                            const posId = idArray.join(".");
-                            const longitude = await this.getStateAsync(posId + ".longitude");
-                            const latitude = await this.getStateAsync(posId + ".latitude");
-                            if (!longitude || !latitude) {
-                                this.log.info("No Location available, location information needed for this action");
-                                return;
-                            }
-                            body = '{"honkAndFlashRequest":{"serviceOperationCode":"HONK_AND_FLASH","userPosition":{"latitude":' + latitude.val + ',"longitude":' + longitude.val + "}}}";
-                            contentType = "application/json; charset=UTF-8";
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/rhf/v1/$type/$country/vehicles/$vin/honkAndFlash", body, contentType).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-
-                        if (action === "standheizung" || action === "standheizungv2") {
-                            body =
-                                '<?xml version="1.0" encoding= "UTF-8" ?>\n<performAction xmlns="http://audi.de/connect/rs">\n   <quickstart>\n      <active>true</active>\n   </quickstart>\n</performAction>';
-                            if (state.val === false) {
-                                body =
-                                    '<?xml version="1.0" encoding= "UTF-8" ?>\n<performAction xmlns="http://audi.de/connect/rs">\n   <quickstop>\n      <active>false</active>\n   </quickstop>\n</performAction>';
-                            }
-                            contentType = "application/vnd.vwg.mbb.RemoteStandheizung_v2_0_0+xml";
-                            if (action === "standheizungv2") {
-                                body = '{"performAction":{"quickstart":{"startMode":"heating","active":true,"climatisationDuration":30}}}';
-                                if (state.val === false) {
-                                    body = '{"performAction":{"quickstop":{"active":false}}}';
-                                }
-                                contentType = "application/vnd.vwg.mbb.RemoteStandheizung_v2_0_2+json";
-                            }
-
-                            const secToken = await this.requestSecToken(vin, "rheating_v1/operations/P_QSACT");
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/rs/v1/$type/$country/vehicles/$vin/action", body, contentType, secToken).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-                        if (action === "lock" || action === "lockv2") {
-                            body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<rluAction xmlns="http://audi.de/connect/rlu">\n   <action>lock</action>\n</rluAction>';
-                            let lockAction = "LOCK";
-                            if (state.val === false) {
-                                body = '<?xml version="1.0" encoding= "UTF-8" ?>\n<rluAction xmlns="http://audi.de/connect/rlu">\n   <action>unlock</action>\n</rluAction>';
-                                lockAction = "UNLOCK";
-                            }
-                            contentType = "application/vnd.vwg.mbb.RemoteLockUnlock_v1_0_0+xml";
-                            const secToken = await this.requestSecToken(vin, "rlu_v1/operations/" + lockAction);
-                            this.setVehicleStatus(vin, "$homeregion/fs-car/bs/rlu/v1/$type/$country/vehicles/$vin/actions", body, contentType, secToken).catch(() => {
-                                this.log.error("failed set state");
-                            });
-                        }
-                    }
-                } else {
-                    const vin = id.split(".")[2];
-                    if (id.indexOf("targetSOC_pct") !== -1) {
-                        // remote.targetSOC = state.val
-                    }
-                    if (id.indexOf("carCoordinate.latitude") !== -1 && state.ts === state.lc) {
-                        const longitude = await this.getStateAsync(id.replace("latitude", "longitude"));
-                        const longitudeValue = parseFloat(longitude.val);
-
-                        if (!this.config.reversePos) {
-                            this.log.debug("reverse pos deactivated");
-                            return;
-                        }
-                        this.log.debug("reverse pos started");
-                        request.get(
-                            {
-                                url: "https://nominatim.openstreetmap.org/reverse?lat=" + state.val / 1000000 + "&lon=" + longitudeValue / 1000000 + "&format=json",
-
-                                headers: {
-                                    "User-Agent": "ioBroker/vw-connect",
-                                },
-                                json: true,
-                                followAllRedirects: true,
-                            },
-                            (err, resp, body) => {
-                                this.log.debug("reverse pos received");
-                                this.log.debug(JSON.stringify(body));
-                                if (err || resp.statusCode >= 400 || !body) {
-                                    body && this.log.error(JSON.stringify(body));
-                                    resp && this.log.error(resp.statusCode);
-                                    err && this.log.error(err);
-                                    return;
-                                }
-                                if (body.display_name) {
-                                    try {
-                                        const number = body.address.house_number || "";
-                                        const city = body.address.city || body.address.town || body.address.village;
-                                        const fullAdress = body.address.road + " " + number + ", " + body.address.postcode + " " + city + ", " + body.address.country;
-                                    } catch (err) {
-                                        this.log.error(err);
-                                    }
-                                } else {
-                                    this.log.error(JSON.stringify(body));
-                                }
-                            }
-                        );
-                    }
-                }
-            } else {
-                // The state was deleted
-                //	this.log.info(`state ${id} deleted`);
-            }
-        } catch (err) {
-            this.log.error("Error in OnStateChange:" + err);
         }
     }
 }
