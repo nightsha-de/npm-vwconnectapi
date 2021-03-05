@@ -8,7 +8,6 @@ const { Crypto } = require("@peculiar/webcrypto");
 const { v4: uuidv4 } = require("uuid");
 const traverse = require("traverse");
 const jsdom = require("jsdom");
-const { extractKeys } = require("./lib/extractKeys");
 const { JSDOM } = jsdom;
 
 class Log {
@@ -64,7 +63,6 @@ class VwWeConnect {
         this.boolFinishCarData = false;
       
         this.log = new Log(this.config.logLevel);
-        this.extractKeys = extractKeys;
         this.jar = request.jar();
 
         this.refreshTokenInterval = null;
@@ -1306,7 +1304,6 @@ class VwWeConnect {
             });
         this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/charging/records?limit=" + limit + "&offset=0", header, "wecharge.chargeandpay.records", [404], "result")
             .then((body) => {
-                //this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
                 this.log.debug("wecharge.chargeandpay.records.newesItem: " + JSON.stringify(body));
                 this.boolFinishChargeAndPay = true;
             })
@@ -1331,7 +1328,6 @@ class VwWeConnect {
                         "charging_sessions"
                     )
                         .then((body) => {
-                           //this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
                            this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + JSON.stringify(body[0]));
                         })
                         .catch((hideError) => {
@@ -1674,8 +1670,6 @@ class VwWeConnect {
                         if (result && result.carportData && result.carportData.modelName) {
                             this.updateName(vin, result.carportData.modelName);
                         }
-
-                        this.extractKeys(this, vin + ".general", result);
 
                         resolve();
                     } catch (err) {
