@@ -45,16 +45,11 @@ class VwWeConnect {
         interval: 10,
         forceinterval: 0,
         numberOfTrips: 1,
-        logLevel: "ERROR"
+        logLevel: "ERROR",
+        targetTempC: -1
     }
     
-    constructor() {
-        //this.on("ready", this.onReady.bind(this));
-        //// this.on("objectChange", this.onObjectChange.bind(this));
-        //this.on("stateChange", this.onStateChange.bind(this));
-        //// this.on("message", this.onMessage.bind(this));
-        //this.on("unload", this.onUnload.bind(this));
-        
+    constructor() {        
         this.boolFinishIdData = false;
         this.boolFinishHomecharging = false;
         this.boolFinishChargeAndPay = false;
@@ -157,6 +152,10 @@ class VwWeConnect {
     
     setConfig(pType) {
       this.config.type = pType;
+    }
+
+    setTargetTemp(pTempC) {
+      this.config.targetTempC = pTempC;
     }
 
     // logLevel: ERROR, INFO, DEBUG
@@ -1481,16 +1480,23 @@ class VwWeConnect {
     
     setIdRemote(vin, action, value, bodyContent) {
         return new Promise(async (resolve, reject) => {
-            const pre = this.name + "." + this.instance;
             let body = bodyContent || {};
             if (action === "climatisation" && value === "start") {
-                const climateStates = await this.getStatesAsync(pre + "." + vin + ".status.climatisationSettings.*");
+                const climateStates = this.idData.data.climatisationSettings;
                 body = {};
                 const allIds = Object.keys(climateStates);
                 allIds.forEach((keyName) => {
                     const key = keyName.split(".").splice(-1)[0];
+                    if (this.config.targetTempC >= 16 && this.config.targetTempC <= 27) {
+                        if (key == "targetTemperature_C") {
+                            climateStates[keyName] = this.config.targetTempC;
+                        }
+                        if (key == "targetTemperature_K") {
+                            climateStates[keyName] = this.config.targetTempC + 273.15;
+                        }
+                    }
                     if (key.indexOf("Timestamp") === -1) {
-                        body[key] = climateStates[keyName].val;
+                        body[key] = climateStates[keyName];
                     }
                 });
 
