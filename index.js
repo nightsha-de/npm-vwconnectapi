@@ -48,6 +48,10 @@ class VwWeConnect {
         logLevel: "ERROR",
         targetTempC: -1
     }
+
+    currSession = {
+        vin: "n/a"
+    }
     
     constructor() {        
         this.boolFinishIdData = false;
@@ -154,8 +158,21 @@ class VwWeConnect {
       this.config.type = pType;
     }
 
-    setTargetTemp(pTempC) {
+    startClimatisation(pTempC) {
+      if (!finishedReading()) {
+          this.log.info("Reading necessary data not finished yet. Please try again.");
+          return;
+      }
+      if (this.currSession.vin == "n/a") {
+          this.log.error("VIN not set, aborting.");
+          return;
+      }
+      if (pTempC < 16 || pTempC > 27) {
+          this.log.info("Invalid temperature, setting 20°C as default");
+          pTempC = 20;
+      }
       this.config.targetTempC = pTempC;
+      setIdRemote(this.currSession.vin, "climatisation", "start", "");
     }
 
     // logLevel: ERROR, INFO, DEBUG
