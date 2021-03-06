@@ -15,21 +15,21 @@ class Log {
     this.logLevel = logLevel;
     console.log("Start logging instance");
   }
-  
+
   debug(pMessage) {
     if (this.logLevel == "DEBUG")
     {
       console.log("DEBUG: " + pMessage);
     }
   }
-    
+
   error(pMessage) {
     console.log("ERROR: " + pMessage);
   }
-  
+
   info(pMessage) {
     if (this.logLevel == "DEBUG" || this.logLevel == "INFO")
-    {    
+    {
       console.log("INFO:  " + pMessage);
     }
   }
@@ -52,15 +52,15 @@ class VwWeConnect {
     currSession = {
         vin: "n/a"
     }
-    
-    constructor() {        
+
+    constructor() {
         this.boolFinishIdData = false;
         this.boolFinishHomecharging = false;
         this.boolFinishChargeAndPay = false;
-        this.boolFinishStations = false;      
+        this.boolFinishStations = false;
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
-      
+
         this.log = new Log(this.config.logLevel);
         this.jar = request.jar();
 
@@ -72,7 +72,7 @@ class VwWeConnect {
 
         this.homeRegion = {};
         this.homeRegionSetter = {};
-      
+
         this.vinArray = [];
         this.etags = {};
 
@@ -153,26 +153,40 @@ class VwWeConnect {
         //this.config.forceinterval = 360; // shouldn't be smaller than 360mins, default 0 (off)
         //this.config.numberOfTrips = 1;
     }
-    
+
     setConfig(pType) {
-      this.config.type = pType;
+        this.config.type = pType;
+    }
+
+    setActiveVin(pVin) {
+        if (this.vinArray.includes(pVin)) {
+            this.currSession.vin = pVin;
+            this.log.info("Active VIN successfully set to <" + this.currSession.vin + ">.");
+        } else {
+            this.log.error("VIN <" + pVin + "> is unknown. Active VIN is still <" + this.currSession.vin + ">.");
+        }
     }
 
     startClimatisation(pTempC) {
-      if (!finishedReading()) {
+this.log.debug("startClimatisation with " + pTempC + "°C");
+      if (!this.finishedReading()) {
           this.log.info("Reading necessary data not finished yet. Please try again.");
           return;
       }
-      if (this.currSession.vin == "n/a") {
-          this.log.error("VIN not set, aborting.");
+this.log.debug("1");
+      if (!this.vinArray.includes(this.currSession.vin)) {
+          this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
           return;
       }
+this.log.debug("2");
       if (pTempC < 16 || pTempC > 27) {
           this.log.info("Invalid temperature, setting 20°C as default");
           pTempC = 20;
       }
       this.config.targetTempC = pTempC;
-      setIdRemote(this.currSession.vin, "climatisation", "start", "");
+this.log.debug("startClimatisation return");
+return;
+      this.setIdRemote(this.currSession.vin, "climatisation", "start", "");
     }
 
     // logLevel: ERROR, INFO, DEBUG
