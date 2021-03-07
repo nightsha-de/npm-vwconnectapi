@@ -16,6 +16,10 @@ class Log {
     console.log("Start logging instance");
   }
 
+  setLogLevel(pLogLevel) {
+      this.logLevel = pLogLevel;
+  }
+
   debug(pMessage) {
     if (this.logLevel == "DEBUG")
     {
@@ -60,6 +64,7 @@ class VwWeConnect {
         this.boolFinishStations = false;
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
+        this.boolInProgressClima = false;
 
         this.log = new Log(this.config.logLevel);
         this.jar = request.jar();
@@ -143,6 +148,10 @@ class VwWeConnect {
           && this.boolFinishVehicles;
     }
 
+    climaInProgress() {
+        return this.boolInProgressClima;
+    }
+
     setCredentials(pUser, pPass, pPin) {
         //this.config.userid = 0;
         this.config.user = pUser;
@@ -168,30 +177,28 @@ class VwWeConnect {
     }
 
     startClimatisation(pTempC) {
-this.log.debug("startClimatisation with " + pTempC + "°C");
+      this.log.debug("startClimatisation with " + pTempC + "°C >>");
       if (!this.finishedReading()) {
           this.log.info("Reading necessary data not finished yet. Please try again.");
           return;
       }
-this.log.debug("1");
       if (!this.vinArray.includes(this.currSession.vin)) {
           this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
           return;
       }
-this.log.debug("2");
       if (pTempC < 16 || pTempC > 27) {
           this.log.info("Invalid temperature, setting 20°C as default");
           pTempC = 20;
       }
       this.config.targetTempC = pTempC;
-this.log.debug("startClimatisation return");
-return;
+
       this.setIdRemote(this.currSession.vin, "climatisation", "start", "");
+      this.log.debug("startClimatisation <<");
     }
 
     // logLevel: ERROR, INFO, DEBUG
-    setLogLevel(logLevel) {
-      this.config.logLevel = logLevel;
+    setLogLevel(pLogLevel) {
+      this.log.setLogLevel(pLogLevel);
     }
 
     async getData() {
@@ -1508,9 +1515,11 @@ return;
             this.log.debug("END getIdStatus");
         });
     }
-    
+
     setIdRemote(vin, action, value, bodyContent) {
         return new Promise(async (resolve, reject) => {
+            this.log.debug("setIdRemote >>");
+            this.boolInProgressClima = true;
             let body = bodyContent || {};
             if (action === "climatisation" && value === "start") {
                 const climateStates = this.idData.data.climatisationSettings;
@@ -1566,20 +1575,24 @@ return;
                             body && this.log.error(JSON.stringify(body));
                             this.refreshIDToken().catch(() => {});
                             this.log.error("Refresh Token");
+                            this.boolInProgressClima = false;
                             reject();
                             return;
                         }
                         err && this.log.error(err);
                         resp && this.log.error(resp.statusCode.toString());
                         body && this.log.error(JSON.stringify(body));
+                        this.boolInProgressClima = false;
                         reject();
                         return;
                     }
                     try {
                         this.log.debug(JSON.stringify(body));
+                        this.boolInProgressClima = false;
                         resolve();
                     } catch (err) {
                         this.log.error(err);
+                        this.boolInProgressClima = false;
                         reject();
                     }
                 }
@@ -2470,7 +2483,7 @@ return;
             clearInterval(this.fupdateInterval);
             clearTimeout(this.refreshTokenTimeout);
             //callback();
-            this.log.debug("onUnloaad: Success");
+            this.log.debug("onUnload: Success");
         } catch (e) {
             //callback();
             this.log.error("onUnload: Error");
