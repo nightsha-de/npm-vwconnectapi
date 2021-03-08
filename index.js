@@ -208,6 +208,8 @@ class VwWeConnect {
         this.setIdRemote(this.currSession.vin, "charging", "settings")
           .then(() => {
               this.log.info("Target SOC set to " + this.config.targetSOC + "%.");
+              resolve();
+              return;
           })
           .catch(() => {
                 this.log.error("setting SOC failed");
