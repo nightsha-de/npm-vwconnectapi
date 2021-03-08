@@ -8,7 +8,6 @@ const { Crypto } = require("@peculiar/webcrypto");
 const { v4: uuidv4 } = require("uuid");
 const traverse = require("traverse");
 const jsdom = require("jsdom");
-const { extractKeys } = require("./lib/extractKeys");
 const { JSDOM } = jsdom;
 
 class Log {
@@ -16,21 +15,25 @@ class Log {
     this.logLevel = logLevel;
     console.log("Start logging instance");
   }
-  
+
+  setLogLevel(pLogLevel) {
+      this.logLevel = pLogLevel;
+  }
+
   debug(pMessage) {
     if (this.logLevel == "DEBUG")
     {
       console.log("DEBUG: " + pMessage);
     }
   }
-    
+
   error(pMessage) {
     console.log("ERROR: " + pMessage);
   }
-  
+
   info(pMessage) {
     if (this.logLevel == "DEBUG" || this.logLevel == "INFO")
-    {    
+    {
       console.log("INFO:  " + pMessage);
     }
   }
@@ -46,25 +49,23 @@ class VwWeConnect {
         interval: 10,
         forceinterval: 0,
         numberOfTrips: 1,
-        logLevel: "ERROR"
+        logLevel: "ERROR",
+        targetTempC: -1
     }
-    
+
+    currSession = {
+        vin: "n/a"
+    }
+
     constructor() {
-        //this.on("ready", this.onReady.bind(this));
-        //// this.on("objectChange", this.onObjectChange.bind(this));
-        //this.on("stateChange", this.onStateChange.bind(this));
-        //// this.on("message", this.onMessage.bind(this));
-        //this.on("unload", this.onUnload.bind(this));
-        
         this.boolFinishIdData = false;
         this.boolFinishHomecharging = false;
         this.boolFinishChargeAndPay = false;
-        this.boolFinishStations = false;      
+        this.boolFinishStations = false;
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
-      
+
         this.log = new Log(this.config.logLevel);
-        this.extractKeys = extractKeys;
         this.jar = request.jar();
 
         this.refreshTokenInterval = null;
@@ -75,7 +76,7 @@ class VwWeConnect {
 
         this.homeRegion = {};
         this.homeRegionSetter = {};
-      
+
         this.vinArray = [];
         this.etags = {};
 
@@ -156,23 +157,95 @@ class VwWeConnect {
         //this.config.forceinterval = 360; // shouldn't be smaller than 360mins, default 0 (off)
         //this.config.numberOfTrips = 1;
     }
-    
+
     setConfig(pType) {
-      this.config.type = pType;
+        this.config.type = pType;
+    }
+
+    setActiveVin(pVin) {
+        if (this.vinArray.includes(pVin)) {
+            this.currSession.vin = pVin;
+            this.log.info("Active VIN successfully set to <" + this.currSession.vin + ">.");
+        } else {
+            this.log.error("VIN <" + pVin + "> is unknown. Active VIN is still <" + this.currSession.vin + ">.");
+        }
+    }
+
+    stopClimatisation() {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("stopClimatisation >>");
+        this.setIdRemote(this.currSession.vin, "climatisation", "stop", "")
+          .then(() => {
+            this.log.debug("stopClimatisation successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("stopClimatisation failed");
+            reject();
+            return;
+          });
+        this.log.debug("stopClimatisation <<");
+      });
+    }
+
+    startClimatisation(pTempC) {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("startClimatisation with " + pTempC + "°C >>");
+        if (!this.finishedReading()) {
+            this.log.info("Reading necessary data not finished yet. Please try again.");
+            reject();
+            return;
+        }
+        if (!this.vinArray.includes(this.currSession.vin)) {
+            this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
+            reject();
+            return;
+        }
+        if (pTempC < 16 || pTempC > 27) {
+            this.log.info("Invalid temperature, setting 20°C as default");
+            pTempC = 20;
+        }
+        this.config.targetTempC = pTempC;
+
+        this.setIdRemote(this.currSession.vin, "climatisation", "start", "")
+          .then(() => {
+            this.log.debug("startClimatisation successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("startClimatisation failed");
+            reject();
+            return;
+          });
+        this.log.debug("startClimatisation <<");
+      });
     }
 
     // logLevel: ERROR, INFO, DEBUG
-    setLogLevel(logLevel) {
-      this.config.logLevel = logLevel;
+    setLogLevel(pLogLevel) {
+      this.log.setLogLevel(pLogLevel);
     }
 
     async getData() {
         this.boolFinishIdData = false;
         this.boolFinishHomecharging = false;
         this.boolFinishChargeAndPay = false;
-        this.boolFinishStations = false;      
+        this.boolFinishStations = false;
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
+
+        // resolve only after all the different calls have finished reading their data
+        // await promise at the end of this method
+        let promise = new Promise((resolve, reject) => {
+            setInterval(() => {
+                if (this.finishedReading())
+                {
+                    resolve("done!");
+                }
+            }, 1000)
+        });
 
         // Reset the connection indicator during startup
         this.type = "VW";
@@ -305,7 +378,7 @@ class VwWeConnect {
                                         }
                                     });
                                 }
-                          
+
                                 this.updateInterval = setInterval(() => {
                                     if (this.config.type === "go") {
                                         this.getVehicles();
@@ -357,9 +430,11 @@ class VwWeConnect {
             .catch(() => {
                 this.log.error("Login Failed");
             });
+
+        let result = await promise; // wait for the promise from the start to resolve
         this.log.debug("getData END");
     }
-    
+
     login() {
         return new Promise(async (resolve, reject) => {
             const nonce = this.getNonce();
@@ -1269,7 +1344,7 @@ class VwWeConnect {
         this.log.debug("END getVehicles");
     }
 
- getWcData(limit) {
+    getWcData(limit) {
         if (!limit) {
             limit = 25;
         }
@@ -1306,7 +1381,6 @@ class VwWeConnect {
             });
         this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/charging/records?limit=" + limit + "&offset=0", header, "wecharge.chargeandpay.records", [404], "result")
             .then((body) => {
-                //this.extractKeys(this, "wecharge.chargeandpay.records.newesItem", body[0]);
                 this.log.debug("wecharge.chargeandpay.records.newesItem: " + JSON.stringify(body));
                 this.boolFinishChargeAndPay = true;
             })
@@ -1331,7 +1405,6 @@ class VwWeConnect {
                         "charging_sessions"
                     )
                         .then((body) => {
-                           //this.extractKeys(this, "wecharge.homecharging.stations." + station.name + ".sessions.newesItem", body[0]);
                            this.log.debug("wecharge.homecharging.stations." + station.name + ".sessions.newesItem: " + JSON.stringify(body[0]));
                         })
                         .catch((hideError) => {
@@ -1482,19 +1555,33 @@ class VwWeConnect {
             this.log.debug("END getIdStatus");
         });
     }
-    
+
     setIdRemote(vin, action, value, bodyContent) {
         return new Promise(async (resolve, reject) => {
-            const pre = this.name + "." + this.instance;
+            this.log.debug("setIdRemote >>");
             let body = bodyContent || {};
             if (action === "climatisation" && value === "start") {
-                const climateStates = await this.getStatesAsync(pre + "." + vin + ".status.climatisationSettings.*");
+                const climateStates = this.idData.data.climatisationSettings; // get this from the internal object filled by getData()
                 body = {};
                 const allIds = Object.keys(climateStates);
                 allIds.forEach((keyName) => {
                     const key = keyName.split(".").splice(-1)[0];
+                    if (this.config.targetTempC >= 16 && this.config.targetTempC <= 27) {
+                        if (key == "targetTemperature_C") {
+                            climateStates[keyName] = this.config.targetTempC;
+                        }
+                        if (key == "targetTemperature_K") {
+                            climateStates[keyName] = this.config.targetTempC + 273.15;
+                        }
+                    }
+                    else
+                    {
+                        this.log.error("Cannot set temperature to " + this.config.targetTempC + "°C.");
+                        reject();
+                        return;
+                    }
                     if (key.indexOf("Timestamp") === -1) {
-                        body[key] = climateStates[keyName].val;
+                        body[key] = climateStates[keyName];
                     }
                 });
 
@@ -1674,8 +1761,6 @@ class VwWeConnect {
                         if (result && result.carportData && result.carportData.modelName) {
                             this.updateName(vin, result.carportData.modelName);
                         }
-
-                        this.extractKeys(this, vin + ".general", result);
 
                         resolve();
                     } catch (err) {
@@ -2439,7 +2524,7 @@ class VwWeConnect {
             clearInterval(this.fupdateInterval);
             clearTimeout(this.refreshTokenTimeout);
             //callback();
-            this.log.debug("onUnloaad: Success");
+            this.log.debug("onUnload: Success");
         } catch (e) {
             //callback();
             this.log.error("onUnload: Error");
