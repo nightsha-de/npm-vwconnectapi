@@ -1646,6 +1646,7 @@ class VwWeConnect {
                         if (key == "targetSOC_pct") {
                             chargingStates[keyName] = this.config.targetSOC;
                         }
+                    }
                     else
                     {
                         this.log.error("Cannot set target SOC to " + this.config.targetSOC + "%.");
