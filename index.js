@@ -50,7 +50,8 @@ class VwWeConnect {
         forceinterval: 0,
         numberOfTrips: 1,
         logLevel: "ERROR",
-        targetTempC: -1
+        targetTempC: -1,
+        targetSOC: -1
     }
 
     currSession = {
@@ -169,6 +170,57 @@ class VwWeConnect {
         } else {
             this.log.error("VIN <" + pVin + "> is unknown. Active VIN is still <" + this.currSession.vin + ">.");
         }
+    }
+
+    stopCharging() {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("stopCharging >>");
+        this.setIdRemote(this.currSession.vin, "charging", "stop", "")
+          .then(() => {
+            this.log.debug("stopCharging successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("stopCharging failed");
+            reject();
+            return;
+          });
+        this.log.debug("stopCharging <<");
+      });
+    }
+
+    startCharging(pTargetSOC) {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("startCharging with " + pTargetSOC + "% >>");
+        if (!this.finishedReading()) {
+            this.log.info("Reading necessary data not finished yet. Please try again.");
+            reject();
+            return;
+        }
+        if (!this.vinArray.includes(this.currSession.vin)) {
+            this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
+            reject();
+            return;
+        }
+        this.config.targetSOC = pTargetSOC;
+
+        this.setIdRemote(this.currSession.vin, "charging", "settings")
+          .then(() => {
+            this.setIdRemote(this.currSession.vin, "charging", "start", "")
+              .then(() => {
+                this.log.debug("startCharging successful");
+                resolve();
+                return;
+              })
+              .catch(() => {
+                this.log.error("startCharging failed");
+                reject();
+                return;
+              });
+          });
+        this.log.debug("startCharging <<");
+      });
     }
 
     stopClimatisation() {
@@ -1582,6 +1634,30 @@ class VwWeConnect {
                     }
                     if (key.indexOf("Timestamp") === -1) {
                         body[key] = climateStates[keyName];
+                    }
+                });
+
+                // body = JSON.stringify(body);
+            }
+            if (action === "charging" && value === "settings") {
+                const chargingStates = this.idData.data.chargingSettings; // get this from the internal object filled by getData()
+                body = {};
+                const allIds = Object.keys(chargingStates);
+                allIds.forEach((keyName) => {
+                    const key = keyName.split(".").splice(-1)[0];
+                    if (this.config.targetSOC > 0 && this.config.targetSOC <= 100) {
+                        if (key == "targetSOC_pct") {
+                            chargingStates[keyName] = this.config.targetSOC;
+                        }
+                    }
+                    else
+                    {
+                        this.log.error("Cannot set target SOC to " + this.config.targetSOC + "%.");
+                        reject();
+                        return;
+                    }
+                    if (key.indexOf("Timestamp") === -1) {
+                        body[key] = chargingStates[keyName];
                     }
                 });
 
