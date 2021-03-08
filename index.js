@@ -1433,7 +1433,8 @@ class VwWeConnect {
             });
         this.genericRequest("https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/charging/records?limit=" + limit + "&offset=0", header, "wecharge.chargeandpay.records", [404], "result")
             .then((body) => {
-                this.log.debug("wecharge.chargeandpay.records.newesItem: " + JSON.stringify(body));
+                this.log.debug("wecharge.chargeandpay.records.newestItem: " + JSON.stringify(body));
+                this.chargeAndPay = body;
                 this.boolFinishChargeAndPay = true;
             })
             .catch((hideError) => {
