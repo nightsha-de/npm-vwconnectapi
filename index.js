@@ -176,24 +176,56 @@ class VwWeConnect {
         }
     }
 
-    startClimatisation(pTempC) {
-      this.log.debug("startClimatisation with " + pTempC + "°C >>");
-      if (!this.finishedReading()) {
-          this.log.info("Reading necessary data not finished yet. Please try again.");
-          return;
-      }
-      if (!this.vinArray.includes(this.currSession.vin)) {
-          this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
-          return;
-      }
-      if (pTempC < 16 || pTempC > 27) {
-          this.log.info("Invalid temperature, setting 20°C as default");
-          pTempC = 20;
-      }
-      this.config.targetTempC = pTempC;
+    stopClimatisation() {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("stopClimatisation >>");
+        this.setIdRemote(this.currSession.vin, "climatisation", "stop", "")
+          .then(() => {
+            this.log.debug("stopClimatisation successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("stopClimatisation failed");
+            reject();
+            return;
+          });
+        this.log.debug("stopClimatisation <<");
+      });
+    }
 
-      this.setIdRemote(this.currSession.vin, "climatisation", "start", "");
-      this.log.debug("startClimatisation <<");
+    startClimatisation(pTempC) {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("startClimatisation with " + pTempC + "°C >>");
+        if (!this.finishedReading()) {
+            this.log.info("Reading necessary data not finished yet. Please try again.");
+            reject();
+            return;
+        }
+        if (!this.vinArray.includes(this.currSession.vin)) {
+            this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
+            reject();
+            return;
+        }
+        if (pTempC < 16 || pTempC > 27) {
+            this.log.info("Invalid temperature, setting 20°C as default");
+            pTempC = 20;
+        }
+        this.config.targetTempC = pTempC;
+
+        this.setIdRemote(this.currSession.vin, "climatisation", "start", "")
+          .then(() => {
+            this.log.debug("startClimatisation successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("startClimatisation failed");
+            reject();
+            return;
+          });
+        this.log.debug("startClimatisation <<");
+      });
     }
 
     // logLevel: ERROR, INFO, DEBUG
@@ -205,9 +237,18 @@ class VwWeConnect {
         this.boolFinishIdData = false;
         this.boolFinishHomecharging = false;
         this.boolFinishChargeAndPay = false;
-        this.boolFinishStations = false;      
+        this.boolFinishStations = false;
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
+
+let promise = new Promise((resolve, reject) => {
+    setInterval(() => {
+        if (this.finishedReading())
+        {
+            resolve("done!");
+        }
+    }, 1000)
+});
 
         // Reset the connection indicator during startup
         this.type = "VW";
@@ -340,7 +381,7 @@ class VwWeConnect {
                                         }
                                     });
                                 }
-                          
+
                                 this.updateInterval = setInterval(() => {
                                     if (this.config.type === "go") {
                                         this.getVehicles();
@@ -392,9 +433,11 @@ class VwWeConnect {
             .catch(() => {
                 this.log.error("Login Failed");
             });
+        this.log.debug("getData before wait promise");
+        let result = await promise;
         this.log.debug("getData END");
     }
-    
+
     login() {
         return new Promise(async (resolve, reject) => {
             const nonce = this.getNonce();
