@@ -190,9 +190,9 @@ class VwWeConnect {
       });
     }
 
-    startCharging(pTargetSOC) {
+    setTargetSOC(pTargetSOC) {
       return new Promise(async (resolve, reject) => {
-        this.log.debug("startCharging with " + pTargetSOC + "% >>");
+        this.log.debug("setTargetSOC to " + pTargetSOC + "% >>");
         if (!this.finishedReading()) {
             this.log.info("Reading necessary data not finished yet. Please try again.");
             reject();
@@ -207,18 +207,43 @@ class VwWeConnect {
 
         this.setIdRemote(this.currSession.vin, "charging", "settings")
           .then(() => {
-            this.setIdRemote(this.currSession.vin, "charging", "start", "")
-              .then(() => {
-                this.log.debug("startCharging successful");
-                resolve();
-                return;
-              })
-              .catch(() => {
-                this.log.error("startCharging failed");
+              this.log.info("Target SOC set to " + this.config.targetSOC + "%.");
+          })
+          .catch(() => {
+                this.log.error("setting SOC failed");
                 reject();
                 return;
-              });
           });
+        this.log.debug("setTargetSOC <<");
+      });
+    }
+
+    startCharging() {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("startCharging with " + pTargetSOC + "% >>");
+        if (!this.finishedReading()) {
+            this.log.info("Reading necessary data not finished yet. Please try again.");
+            reject();
+            return;
+        }
+        if (!this.vinArray.includes(this.currSession.vin)) {
+            this.log.error("Unknown VIN, aborting. Use setActiveVin to set a valid VIN.");
+            reject();
+            return;
+        }
+
+        this.setIdRemote(this.currSession.vin, "charging", "start")
+          .then(() => {
+            this.log.debug("startCharging successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("startCharging failed");
+            reject();
+            return;
+          });
+
         this.log.debug("startCharging <<");
       });
     }
