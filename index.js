@@ -171,6 +171,24 @@ class VwWeConnect {
         }
     }
 
+    stopCharging() {
+      return new Promise(async (resolve, reject) => {
+        this.log.debug("stopCharging >>");
+        this.setIdRemote(this.currSession.vin, "charging", "stop", "")
+          .then(() => {
+            this.log.debug("stopCharging successful");
+            resolve();
+            return;
+          })
+          .catch(() => {
+            this.log.error("stopCharging failed");
+            reject();
+            return;
+          });
+        this.log.debug("stopCharging <<");
+      });
+    }
+
     stopClimatisation() {
       return new Promise(async (resolve, reject) => {
         this.log.debug("stopClimatisation >>");
