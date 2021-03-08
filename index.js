@@ -64,7 +64,6 @@ class VwWeConnect {
         this.boolFinishStations = false;
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
-        this.boolInProgressClima = false;
 
         this.log = new Log(this.config.logLevel);
         this.jar = request.jar();
@@ -146,10 +145,6 @@ class VwWeConnect {
           && this.boolFinishStations
           /*&& this.boolFinishCarData*/
           && this.boolFinishVehicles;
-    }
-
-    climaInProgress() {
-        return this.boolInProgressClima;
     }
 
     setCredentials(pUser, pPass, pPin) {
@@ -241,14 +236,16 @@ class VwWeConnect {
         this.boolFinishVehicles = false;
         this.boolFinishCarData = false;
 
-let promise = new Promise((resolve, reject) => {
-    setInterval(() => {
-        if (this.finishedReading())
-        {
-            resolve("done!");
-        }
-    }, 1000)
-});
+        // resolve only after all the different calls have finished reading their data
+        // await promise at the end of this method
+        let promise = new Promise((resolve, reject) => {
+            setInterval(() => {
+                if (this.finishedReading())
+                {
+                    resolve("done!");
+                }
+            }, 1000)
+        });
 
         // Reset the connection indicator during startup
         this.type = "VW";
@@ -433,8 +430,8 @@ let promise = new Promise((resolve, reject) => {
             .catch(() => {
                 this.log.error("Login Failed");
             });
-        this.log.debug("getData before wait promise");
-        let result = await promise;
+
+        let result = await promise; // wait for the promise from the start to resolve
         this.log.debug("getData END");
     }
 
@@ -1347,7 +1344,7 @@ let promise = new Promise((resolve, reject) => {
         this.log.debug("END getVehicles");
     }
 
- getWcData(limit) {
+    getWcData(limit) {
         if (!limit) {
             limit = 25;
         }
@@ -1562,10 +1559,9 @@ let promise = new Promise((resolve, reject) => {
     setIdRemote(vin, action, value, bodyContent) {
         return new Promise(async (resolve, reject) => {
             this.log.debug("setIdRemote >>");
-            this.boolInProgressClima = true;
             let body = bodyContent || {};
             if (action === "climatisation" && value === "start") {
-                const climateStates = this.idData.data.climatisationSettings;
+                const climateStates = this.idData.data.climatisationSettings; // get this from the internal object filled by getData()
                 body = {};
                 const allIds = Object.keys(climateStates);
                 allIds.forEach((keyName) => {
@@ -1577,6 +1573,12 @@ let promise = new Promise((resolve, reject) => {
                         if (key == "targetTemperature_K") {
                             climateStates[keyName] = this.config.targetTempC + 273.15;
                         }
+                    }
+                    else
+                    {
+                        this.log.error("Cannot set temperature to " + this.config.targetTempC + "°C.");
+                        reject();
+                        return;
                     }
                     if (key.indexOf("Timestamp") === -1) {
                         body[key] = climateStates[keyName];
@@ -1618,24 +1620,20 @@ let promise = new Promise((resolve, reject) => {
                             body && this.log.error(JSON.stringify(body));
                             this.refreshIDToken().catch(() => {});
                             this.log.error("Refresh Token");
-                            this.boolInProgressClima = false;
                             reject();
                             return;
                         }
                         err && this.log.error(err);
                         resp && this.log.error(resp.statusCode.toString());
                         body && this.log.error(JSON.stringify(body));
-                        this.boolInProgressClima = false;
                         reject();
                         return;
                     }
                     try {
                         this.log.debug(JSON.stringify(body));
-                        this.boolInProgressClima = false;
                         resolve();
                     } catch (err) {
                         this.log.error(err);
-                        this.boolInProgressClima = false;
                         reject();
                     }
                 }
