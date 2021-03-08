@@ -13,28 +13,34 @@ to install.
 const api = require('npm-vwconnectapi');
 var log = new api.Log();
 var vwConn = new api.VwWeConnect();
+vwConn.setLogLevel("INFO"); // optional, ERROR (default), INFO or DEBUG
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
 vwConn.setConfig("id"); // type
 vwConn.getData()
+  .then(() => {
+    log.info("SOC " + vwConn.idData.data.batteryStatus.currentSOC_pct + "%");
 
-var intervalid = setInterval(function() {
-  if (vwConn.finishedReading())
-  {
-    // log State of Charge
-    log.info("State of Charge: " + vwConn.idData.data.batteryStatus.currentSOC_pct + "%");
-    
-    log.info("Charging records:");
-    vwConn.homechargingRecords.forEach((record) =>
-      {
-        log.info(record.start_date_time + ": " + record.total_energy_wh/1000 + "kWh");
-      }
-    );
-    
-    vwConn.onUnload();
+    vwConn.setActiveVin("the VIN of your ID"); // must exist in vwConn.vehicles
+    //vwConn.startClimatisation(17).then(...)
+    //vwConn.stopClimatisation().then(...)
+    //vwConn.stopCharging().then(...)
+    vwConn.startCharging(60)
+      .then(() => {
+        log.info("Charging started");
+      })
+      .catch(() => {
+        log.error("Error starting climatisation");
+      })
+      .finally(() => {
+        log.info("Exiting ...");
+        vwConn.onUnload();
+        process.exit(1);
+      });
+  })
+  .catch(() => {
+    log.error("something went wrong");
     process.exit(1);
-  }
-  log.info("Waiting for data ...");
-}, 1000);
+  });
 ```
 
 ### Objects supplied by the API:
