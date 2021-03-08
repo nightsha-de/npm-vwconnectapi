@@ -205,16 +205,19 @@ class VwWeConnect {
         }
         this.config.targetSOC = pTargetSOC;
 
-        this.setIdRemote(this.currSession.vin, "charging", "start", "")
+        this.setIdRemote(this.currSession.vin, "charging", "settings")
           .then(() => {
-            this.log.debug("startCharging successful");
-            resolve();
-            return;
-          })
-          .catch(() => {
-            this.log.error("startCharging failed");
-            reject();
-            return;
+            this.setIdRemote(this.currSession.vin, "charging", "start", "")
+              .then(() => {
+                this.log.debug("startCharging successful");
+                resolve();
+                return;
+              })
+              .catch(() => {
+                this.log.error("startCharging failed");
+                reject();
+                return;
+              });
           });
         this.log.debug("startCharging <<");
       });
@@ -1636,7 +1639,7 @@ class VwWeConnect {
 
                 // body = JSON.stringify(body);
             }
-            if (action === "charging" && value === "start") {
+            if (action === "charging" && value === "settings") {
                 const chargingStates = this.idData.data.chargingSettings; // get this from the internal object filled by getData()
                 body = {};
                 const allIds = Object.keys(chargingStates);
