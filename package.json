@@ -1,6 +1,6 @@
 {
   "name": "npm-vwconnectapi",
-  "version": "0.8.1",
+  "version": "0.9.1",
   "description": "Provides an API for VW Connect",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "Connect",
     "API",
     "ID.3",
-    "Elli Charger"
+    "Elli Charger",
+    "WeCharge"
   ],
   "author": "nightsha-de",
   "license": "MIT",
