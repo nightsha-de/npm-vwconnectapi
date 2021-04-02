@@ -1,13 +1,13 @@
 # npm-vwconnectapi
 NPM package for a VW Connect API based on https://github.com/TA2k/ioBroker.vw-connect
 
-Use
+Clone this repository to $path and use
 ```
-sudo npm install -g /path/to/local/git/repo
+sudo npm install -g $path
 ```
 to install.
 
-### Example:
+### Example code:
 
 ```javascript
 const api = require('npm-vwconnectapi');
