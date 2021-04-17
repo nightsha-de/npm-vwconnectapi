@@ -414,6 +414,16 @@ class VwWeConnect {
             this.log.info("Interval of 0 is not allowed reset to 1");
             this.config.interval = 1;
         }
+        this.tripTypes = [];
+        if (this.config.tripShortTerm == true) {
+            this.tripTypes.push("shortTerm");
+        }
+        if (this.config.tripLongTerm == true) {
+            this.tripTypes.push("longTerm");
+        }
+        if (this.config.tripCyclic == true) {
+            this.tripTypes.push("cyclic");
+        }
         this.login()
             .then(() => {
                 this.log.debug("Login successful");
@@ -442,9 +452,26 @@ class VwWeConnect {
                                                     this.requestStatusUpdate(vin)
                                                         .finally(() => {
                                                             this.statesArray.forEach((state) => {
-                                                                this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2, state.element3, state.element4).catch(() => {
-                                                                    this.log.debug("error while getting " + state.url);
-                                                                });
+                                                                if (state.path == "tripdata") {
+                                                                    this.tripTypes.forEach((tripType) => {
+                                                                        this.getVehicleStatus(
+                                                                            vin,
+                                                                            state.url,
+                                                                            state.path,
+                                                                            state.element,
+                                                                            state.element2,
+                                                                            state.element3,
+                                                                            state.element4,
+                                                                            tripType
+                                                                        ).catch(() => {
+                                                                            this.log.debug("error while getting " + state.url);
+                                                                        });
+                                                                    });
+                                                                } else {
+                                                                    this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2, state.element3, state.element4).catch(() => {
+                                                                        this.log.debug("error while getting " + state.url);
+                                                                    });
+                                                                }
                                                             });
                                                         })
                                                         .catch(() => {
@@ -474,9 +501,18 @@ class VwWeConnect {
                                     } else {
                                         this.vinArray.forEach((vin) => {
                                             this.statesArray.forEach((state) => {
-                                                this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2).catch(() => {
-                                                    this.log.debug("error while getting " + state.url);
-                                                });
+                                                if (state.path == "tripdata") {
+                                                    this.tripTypes.forEach((tripType) => {
+                                                        this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2, null, null, tripType).catch(() => {
+                                                            this.log.debug("error while getting " + state.url);
+                                                        });
+                                                    });
+                                                } else {
+                                                    this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2).catch(() => {
+                                                        this.log.debug("error while getting " + state.url);
+                                                    });
+                                                }
+
                                             });
                                         });
                                     }
@@ -608,7 +644,7 @@ class VwWeConnect {
                             }
                             form["email"] = this.config.user;
                         } else {
-                            this.log.error("No Login Form found");
+                            this.log.error("No Login Form found for type: " + this.type);
                             this.log.debug(JSON.stringify(body));
                             reject();
                             return;
@@ -686,8 +722,76 @@ class VwWeConnect {
                                                 this.log.debug(JSON.stringify(body));
                                                 this.log.debug(JSON.stringify(resp.headers));
 
-                                                if (resp.headers.location.split("&").length <= 1) {
-                                                    this.log.error("No userId found, please check your account");
+                                                if (resp.headers.location.split("&").length <= 2) {
+                                                    this.log.warn(resp.headers.location);
+                                                    this.log.warn("No valid userid, please visit this link or logout and login in your app account:");
+                                                    this.log.warn("https://" + resp.request.host + resp.headers.location);
+                                                    this.log.warn("Try to auto accept new consent");
+
+                                                    request.get(
+                                                        {
+                                                            url: "https://" + resp.request.host + resp.headers.location,
+                                                            jar: this.jar,
+                                                            headers: {
+                                                                "User-Agent":
+                                                                    "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+                                                                "Accept-Language": "en-US,en;q=0.9",
+                                                                "Accept-Encoding": "gzip, deflate",
+                                                                "x-requested-with": this.xrequest,
+                                                            },
+                                                            followAllRedirects: true,
+                                                            gzip: true,
+                                                        },
+                                                        (err, resp, body) => {
+                                                            this.log.debug(body);
+
+                                                            const dom = new JSDOM(body);
+                                                            let form = "";
+                                                            for (const formElement of dom.window.document.querySelectorAll("input")) {
+                                                                if (formElement.type === "hidden") {
+                                                                    form += formElement.name + "=" + formElement.value + "&";
+                                                                }
+                                                            }
+                                                            const url = "https://" + resp.request.host + dom.window.document.querySelector("#emailPasswordForm").action;
+                                                            this.log.debug(JSON.stringify(form));
+                                                            request.post(
+                                                                {
+                                                                    url: url,
+                                                                    jar: this.jar,
+                                                                    headers: {
+                                                                        "Content-Type": "application/x-www-form-urlencoded",
+                                                                        "User-Agent":
+                                                                            "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                                        Accept:
+                                                                            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+                                                                        "Accept-Language": "en-US,en;q=0.9",
+                                                                        "Accept-Encoding": "gzip, deflate",
+                                                                        "x-requested-with": this.xrequest,
+                                                                    },
+                                                                    form: form,
+                                                                    followAllRedirects: true,
+                                                                    gzip: true,
+                                                                },
+                                                                (err, resp, body) => {
+                                                                    if (err || (resp && resp.statusCode >= 400)) {
+                                                                        this.log.warn("Failed to auto accept");
+                                                                        err && this.log.error(err);
+                                                                        resp && this.log.error(resp.statusCode.toString());
+                                                                        body && this.log.error(JSON.stringify(body));
+                                                                        reject();
+                                                                        return;
+                                                                    }
+                                                                    this.log.info("Auto accept succesful. Restart adapter in 10sec");
+                                                                    setTimeout(() => {
+                                                                        this.restart();
+                                                                    }, 10 * 1000);
+                                                                }
+                                                            );
+                                                        }
+                                                    );
+
+                                                    reject();
                                                     return;
                                                 }
                                                 this.config.userid = resp.headers.location.split("&")[2].split("=")[1];
@@ -822,14 +926,14 @@ class VwWeConnect {
         });
     }
 
-    replaceVarInUrl(url, vin) {
+    replaceVarInUrl(url, vin, tripType) {
         const curHomeRegion = this.homeRegion[vin];
         return url
             .replace("/$vin", "/" + vin + "")
             .replace("$homeregion/", curHomeRegion + "/")
             .replace("/$type/", "/" + this.type + "/")
             .replace("/$country/", "/" + this.country + "/")
-            .replace("/$tripType", "/" + this.config.tripType);
+            .replace("/$tripType", "/" + tripType);
     }
 
     getTokens(getRequest, code_verifier, reject, resolve) {
@@ -1026,9 +1130,11 @@ class VwWeConnect {
             },
             (err, resp, body) => {
                 if (err || (resp && resp.statusCode >= 400)) {
+                    this.log.error("Failed to get VWToken");
                     err && this.log.error(err);
                     resp && this.log.error(resp.statusCode.toString());
-                    reject();
+                    body && this.log.error(JSON.stringify(body));
+                    resolve();
                     return;
                 }
                 try {
@@ -1405,7 +1511,11 @@ class VwWeConnect {
                             resolve();
                             return;
                         }
-
+                        if (!body.userVehicles) {
+                            this.log.info("No Vehicles found");
+                            resolve();
+                            return;
+                        }
                         const vehicles = body.userVehicles.vehicle;
                         vehicles.forEach((vehicle) => {
                             this.vinArray.push(vehicle);
@@ -1794,7 +1904,7 @@ class VwWeConnect {
                         if (this.type === "Wc") {
                             //wallcharging relogin no refresh token available
                             this.login().catch(() => {
-                                this.log.debug("Failed wallcharge login");
+                                this.log.debug("No able to Login in WeCharge");
                             });
                         }
                         resolve();
@@ -2011,11 +2121,11 @@ class VwWeConnect {
         });
     }
 
-    getVehicleStatus(vin, url, path, element, element2, element3, element4) {
+    getVehicleStatus(vin, url, path, element, element2, element3, element4, tripType) {
         return new Promise((resolve, reject) => {
-            url = this.replaceVarInUrl(url, vin);
+            url = this.replaceVarInUrl(url, vin, tripType);
             if (path === "tripdata") {
-                if (this.config.tripType === "none") {
+                if (this.tripsActive == false) {
                     resolve();
                     return;
                 }
@@ -2129,14 +2239,22 @@ class VwWeConnect {
                             if (element4 && result[element4]) {
                                 result = result[element4];
                             }
-                            var isStatusData = path === "status";
-                            var isTripData = path === "tripdata";
+                            const isStatusData = path === "status";
+                            const isTripData = path === "tripdata";
 
                             if (isTripData) {
-                                if (this.config.tripType === "none") {
+                                if (this.tripsActive == false) {
                                     resolve();
                                     return;
                                 }
+                                // result.tripData = result.tripData.reverse();
+                                result.tripData.sort((a, b) => {
+                                    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                                });
+                                if (this.config.numberOfTrips > 0) result.tripData = result.tripData.slice(0, this.config.numberOfTrips);
+                                
+                                resolve();
+                                return;
                             }
 
                             var statusKeys = null;
@@ -2621,7 +2739,7 @@ class VwWeConnect {
      */
     onUnload(/*callback*/) {
         try {
-            this.log.info("cleaned everything up...");
+            this.log.debug("cleaned everything up...");
             clearInterval(this.refreshTokenInterval);
             clearInterval(this.vwrefreshTokenInterval);
             clearInterval(this.updateInterval);
