@@ -222,7 +222,7 @@ class VwWeConnect {
 
     startCharging() {
       return new Promise(async (resolve, reject) => {
-        this.log.debug("startCharging with " + pTargetSOC + "% >>");
+        this.log.debug("startCharging >>");
         if (!this.finishedReading()) {
             this.log.info("Reading necessary data not finished yet. Please try again.");
             reject();
