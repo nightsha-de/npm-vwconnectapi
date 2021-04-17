@@ -13,7 +13,7 @@ const { JSDOM } = jsdom;
 class Log {
   constructor(logLevel) {
     this.logLevel = logLevel;
-    console.log("Start logging instance");
+    this.debug("Start logging instance");
   }
 
   setLogLevel(pLogLevel) {
