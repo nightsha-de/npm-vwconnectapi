@@ -13,7 +13,7 @@ to install.
 const api = require('npm-vwconnectapi');
 var log = new api.Log();
 var vwConn = new api.VwWeConnect();
-vwConn.setLogLevel("INFO"); // optional, ERROR (default), INFO or DEBUG
+vwConn.setLogLevel("INFO"); // optional, ERROR (default), INFO, WARN or DEBUG
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
 vwConn.setConfig("id"); // type
 vwConn.getData()
