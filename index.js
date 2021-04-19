@@ -37,6 +37,13 @@ class Log {
       console.log("INFO:  " + pMessage);
     }
   }
+  
+  warn(pMessage) {
+    if (this.logLevel == "DEBUG" || this.logLevel == "INFO" || this.logLevel == "WARN")
+    {
+      console.log("WARN: " + pMessage);
+    }
+  }
 }
 
 class VwWeConnect {
