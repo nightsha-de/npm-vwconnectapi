@@ -1,5 +1,6 @@
 /node_modules
 package-lock.json
+develop.js
 
 ### macOS ###
 .DS_Store
