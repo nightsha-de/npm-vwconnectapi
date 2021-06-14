@@ -7,8 +7,6 @@ const crypto = require("crypto");
 const { Crypto } = require("@peculiar/webcrypto");
 const { v4: uuidv4 } = require("uuid");
 const traverse = require("traverse");
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
 
 class Log {
   constructor(logLevel) {
@@ -632,16 +630,10 @@ class VwWeConnect {
                     }
 
                     try {
-                        const dom = new JSDOM(body);
-                        const form = {};
-                        const formLogin = dom.window.document.querySelector("#emailPasswordForm");
-                        if (formLogin) {
+                        let form = {};
+                        if (body.indexOf("emailPasswordForm") !== -1) {
                             this.log.debug("parseEmailForm");
-                            for (const formElement of dom.window.document.querySelector("#emailPasswordForm").children) {
-                                if (formElement.type === "hidden") {
-                                    form[formElement.name] = formElement.value;
-                                }
-                            }
+                            form = this.extractHidden(body);
                             form["email"] = this.config.user;
                         } else {
                             this.log.error("No Login Form found for type: " + this.type);
@@ -675,16 +667,9 @@ class VwWeConnect {
                                     return;
                                 }
                                 try {
-                                    const dom = new JSDOM(body);
-                                    const form = {};
-                                    const formLogin = dom.window.document.querySelector("#credentialsForm");
-                                    if (formLogin) {
-                                        this.log.debug("parsePasswordForm");
-                                        for (const formElement of dom.window.document.querySelector("#credentialsForm").children) {
-                                            if (formElement.type === "hidden") {
-                                                form[formElement.name] = formElement.value;
-                                            }
-                                        }
+                                    if (body.indexOf("credentialsForm") !== -1) {
+                                        this.log.debug("credentialsForm");
+                                        form = this.extractHidden(body);
                                         form["password"] = this.config.password;
                                     } else {
                                         this.log.error("No Login Form found. Please check your E-Mail in the app.");
@@ -722,7 +707,8 @@ class VwWeConnect {
                                                 this.log.debug(JSON.stringify(body));
                                                 this.log.debug(JSON.stringify(resp.headers));
 
-                                                if (resp.headers.location.split("&").length <= 2) {
+                                                if (resp.headers.location.split("&").length <= 2) ||
+                                                    resp.headers.location.indexOf("/terms-and-conditions?") !== 1) {
                                                     this.log.warn(resp.headers.location);
                                                     this.log.warn("No valid userid, please visit this link or logout and login in your app account:");
                                                     this.log.warn("https://" + resp.request.host + resp.headers.location);
@@ -746,15 +732,10 @@ class VwWeConnect {
                                                         (err, resp, body) => {
                                                             this.log.debug(body);
 
-                                                            const dom = new JSDOM(body);
-                                                            let form = "";
-                                                            for (const formElement of dom.window.document.querySelectorAll("input")) {
-                                                                if (formElement.type === "hidden") {
-                                                                    form += formElement.name + "=" + formElement.value + "&";
-                                                                }
-                                                            }
-                                                            const url = "https://" + resp.request.host + dom.window.document.querySelector("#emailPasswordForm").action;
+                                                            const form = this.extractHidden(body);
+                                                            const url = "https://" + resp.request.host + resp.req.path.split("?")[0];
                                                             this.log.debug(JSON.stringify(form));
+                                                          
                                                             request.post(
                                                                 {
                                                                     url: url,
@@ -774,7 +755,7 @@ class VwWeConnect {
                                                                     gzip: true,
                                                                 },
                                                                 (err, resp, body) => {
-                                                                    if (err || (resp && resp.statusCode >= 400)) {
+                                                                    if ((err && err.message.indexOf("Invalid protocol:") !== -1) || (resp && resp.statusCode >= 400)) {
                                                                         this.log.warn("Failed to auto accept");
                                                                         err && this.log.error(err);
                                                                         resp && this.log.error(resp.statusCode.toString());
@@ -828,13 +809,7 @@ class VwWeConnect {
                                                             this.getTokens(getRequest, code_verifier, reject, resolve);
                                                         } else {
                                                             this.log.debug("No Token received visiting url and accept the permissions.");
-                                                            const dom = new JSDOM(body);
-                                                            let form = "";
-                                                            for (const formElement of dom.window.document.querySelectorAll("input")) {
-                                                                if (formElement.type === "hidden") {
-                                                                    form += formElement.name + "=" + formElement.value + "&";
-                                                                }
-                                                            }
+                                                            const form = this.extractHidden(body);
                                                             getRequest = request.post(
                                                                 {
                                                                     url: getRequest.uri.href,
@@ -2315,6 +2290,10 @@ class VwWeConnect {
                                 if (!skipNode) {
                                     const newPath = vin + "." + path + "." + modPath.join(".");
                                     if (this.path.length > 0 && this.isLeaf) {
+                                        value = value || this.node;
+                                        if (!isNaN(Number(value)) && Number(value) === parseFloat(value)) {
+                                            value = Number(value);
+                                        }
                                         if (typeof value === "object") {
                                             value = JSON.stringify(value);
                                         }
@@ -2732,7 +2711,34 @@ class VwWeConnect {
         }
         return result;
     }
-    
+
+    extractHidden(body) {
+        const returnObject = {};
+        let matches;
+        if (body.matchAll) {
+            matches = body.matchAll(/<input (?=[^>]* name=["']([^'"]*)|)(?=[^>]* value=["']([^'"]*)|)/g);
+        } else {
+            this.log.warn("The adapter needs in the future NodeJS v12. https://forum.iobroker.net/topic/22867/how-to-node-js-f%C3%BCr-iobroker-richtig-updaten");
+            matches = this.matchAll(/<input (?=[^>]* name=["']([^'"]*)|)(?=[^>]* value=["']([^'"]*)|)/g, body);
+        }
+        for (const match of matches) {
+            returnObject[match[1]] = match[2];
+        }
+        return returnObject;
+    }
+  
+    matchAll(re, str) {
+        let match;
+        const matches = [];
+
+        while ((match = re.exec(str))) {
+            // add all matched groups
+            matches.push(match);
+        }
+
+        return matches;
+    }
+  
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
      * @param {() => void} callback
