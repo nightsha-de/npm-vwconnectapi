@@ -35,6 +35,13 @@ class Log {
       console.log("INFO:  " + pMessage);
     }
   }
+
+  warn(pMessage) {
+    if (this.logLevel == "DEBUG" || this.logLevel == "INFO" || this.logLevel == "WARN")
+    {
+      console.log("WARN: " + pMessage);
+    }
+  }
 }
 
 class VwWeConnect {
@@ -316,9 +323,10 @@ class VwWeConnect {
         // resolve only after all the different calls have finished reading their data
         // await promise at the end of this method
         let promise = new Promise((resolve, reject) => {
-            setInterval(() => {
+            const finishedReadingInterval = setInterval(() => {
                 if (this.finishedReading())
                 {
+                    clearInterval(finishedReadingInterval)
                     resolve("done!");
                 }
             }, 1000)
@@ -869,7 +877,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     receiveLoginUrl() {
         return new Promise((resolve, reject) => {
             request(
@@ -1276,7 +1284,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     getHomeRegion(vin) {
         return new Promise((resolve, reject) => {
             this.log.debug("START getHomeRegion");
@@ -1306,7 +1314,7 @@ class VwWeConnect {
                             this.log.error(JSON.stringify(body.error));
                             reject();
                         }
-                        this.log.debug("getHomeRegion vin[" + vin + "]: " + JSON.stringify(body));                        
+                        this.log.debug("getHomeRegion vin[" + vin + "]: " + JSON.stringify(body));
                         this.homeRegion[vin] = "https://msg.volkswagen.de";
                         if (body.homeRegion && body.homeRegion.baseUri && body.homeRegion.baseUri.content) {
                             if (body.homeRegion.baseUri.content !== "https://mal-1a.prd.ece.vwg-connect.com/api") {
@@ -1324,7 +1332,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     getCarData() {
         return new Promise((resolve, reject) => {
             this.log.debug("START getCarData");
@@ -1425,7 +1433,7 @@ class VwWeConnect {
                         this.log.debug("getVehicles: " + JSON.stringify(body));
                         this.vehicles = body;
                         this.boolFinishVehicles = true;
-                      
+
                         if (this.config.type === "id") {
                             body.data.forEach((element) => {
                                 const vin = element.vin;
@@ -1550,11 +1558,13 @@ class VwWeConnect {
                 this.boolFinishChargeAndPay = true;
             })
             .catch((hideError) => {
+                this.boolFinishChargeAndPay = true;
                 if (hideError) {
                     this.log.debug("Failed to get chargeandpay records");
                     return;
                 }
                 this.log.error("Failed to get chargeandpay records");
+
             });
         this.genericRequest("https://wecharge.apps.emea.vwapps.io/home-charging/v1/stations?limit=" + limit, header, "wecharge.homecharging.stations", [404], "result", "stations")
             .then((body) => {
@@ -1582,6 +1592,7 @@ class VwWeConnect {
                 });
             })
             .catch((hideError) => {
+                this.boolFinishStations = true;
                 if (hideError) {
                     this.log.debug("Failed to get stations");
                     return;
@@ -1602,6 +1613,7 @@ class VwWeConnect {
                 this.boolFinishHomecharging = true;
             })
             .catch((hideError) => {
+                this.boolFinishHomecharging = true;
                 if (hideError) {
                     this.log.debug("Failed to get records");
                     return;
@@ -1686,7 +1698,7 @@ class VwWeConnect {
                     this.log.debug("getIdStatus: " + JSON.stringify(body));
                     this.idData = body;
                     this.boolFinishIdData = true;
-                    
+
                     try {
                         const adapter = this;
                         traverse(body.data).forEach(function (value) {
@@ -1829,7 +1841,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     refreshIDToken() {
         return new Promise((resolve, reject) => {
             this.log.debug("Token Refresh started");
@@ -1891,7 +1903,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     getVehicleData(vin) {
         return new Promise((resolve, reject) => {
             if (this.config.type === "go") {
@@ -2468,7 +2480,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     setVehicleStatusv2(vin, url, body, contentType, secToken) {
         return new Promise((resolve, reject) => {
             url = this.replaceVarInUrl(url, vin);
@@ -2524,7 +2536,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     requestSecToken(vin, service) {
         return new Promise((resolve, reject) => {
             let url = "https://mal-1a.prd.ece.vwg-connect.com/api/rolesrights/authorization/v2/vehicles/" + vin + "/services/" + service + "/security-pin-auth-requested";
@@ -2630,7 +2642,7 @@ class VwWeConnect {
             );
         });
     }
-    
+
     generateSecurPin(challenge) {
         return new Promise((resolve, reject) => {
             if (!this.config.pin) {
@@ -2654,7 +2666,7 @@ class VwWeConnect {
                 });
         });
     }
-    
+
     getCodeChallenge() {
         let hash = "";
         let result = "";
