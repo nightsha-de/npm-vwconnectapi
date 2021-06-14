@@ -715,8 +715,7 @@ class VwWeConnect {
                                                 this.log.debug(JSON.stringify(body));
                                                 this.log.debug(JSON.stringify(resp.headers));
 
-                                                if (resp.headers.location.split("&").length <= 2) ||
-                                                    resp.headers.location.indexOf("/terms-and-conditions?") !== 1) {
+                                                if (resp.headers.location.split("&").length <= 2 || resp.headers.location.indexOf("/terms-and-conditions?") !== -1) {
                                                     this.log.warn(resp.headers.location);
                                                     this.log.warn("No valid userid, please visit this link or logout and login in your app account:");
                                                     this.log.warn("https://" + resp.request.host + resp.headers.location);
