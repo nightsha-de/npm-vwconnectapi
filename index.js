@@ -367,6 +367,18 @@ class VwWeConnect {
             this.xappversion = "3.2.6";
             this.xappname = "cz.skodaauto.connect";
         }
+        if (this.config.type === "skodae") {
+            this.type = "Skoda";
+            this.country = "CZ";
+            this.clientId = "f9a2359a-b776-46d9-bd0c-db1904343117@apps_vw-dilab_com";
+            this.xclientId = "28cd30c6-dee7-4529-a0e6-b1e07ff90b79";
+            this.scope = "openid mbb profile";
+            this.redirect = "skodaconnect://oidc.login/";
+            this.xrequest = "cz.skodaauto.connect";
+            this.responseType = "code%20id_token";
+            this.xappversion = "3.2.6";
+            this.xappname = "cz.skodaauto.connect";
+        }
         if (this.config.type === "seat") {
             this.type = "Seat";
             this.country = "ES";
@@ -443,6 +455,20 @@ class VwWeConnect {
                                             this.getIdStatus(vin).catch(() => {
                                                 this.log.error("get id status Failed");
                                             });
+                                        } else if (this.config.type === "skodae") {
+                                            this.clientId = "7f045eee-7003-4379-9968-9355ed2adb06%40apps_vw-dilab_com";
+                                            this.scope = "openid dealers profile email cars address";
+                                            this.redirect = "skodaconnect://oidc.login/";
+
+                                             this.login()
+                                                .then(() => {
+                                                    this.getSkodaEStatus(vin).catch(() => {
+                                                        this.log.error("get skodae status Failed");
+                                                    });
+                                                })
+                                                .catch(() => {
+                                                    this.log.error("Failed second skoda login");
+                                                });                                          
                                         } else {
                                             this.getHomeRegion(vin)
                                                 .catch(() => {
@@ -495,6 +521,12 @@ class VwWeConnect {
                                     if (this.config.type === "go") {
                                         this.getVehicles();
                                         return;
+                                    } else if (this.config.type === "skodae") {
+                                        this.vinArray.forEach((vin) => {
+                                            this.getSkodaEStatus(vin).catch(() => {
+                                                this.log.error("get skodae status Failed");
+                                            });
+                                        });
                                     } else if (this.config.type === "id") {
                                         this.vinArray.forEach((vin) => {
                                             this.getIdStatus(vin).catch(() => {
@@ -967,7 +999,8 @@ class VwWeConnect {
         if (this.config.type === "vw" || this.config.type === "vwv2") {
             body += "&code_verifier=" + code_verifier;
         } else {
-            body += "&brand=" + this.config.type;
+            const brand = this.config.type === "skodae" ? "skoda" : this.config.type;
+            body += "&brand=" + brand;
         }
         if (this.config.type === "go") {
             url = "https://dmp.apps.emea.vwapps.io/mobility-platform/token";
@@ -1087,7 +1120,7 @@ class VwWeConnect {
                 });
             }, 0.9 * 60 * 60 * 1000); // 0.9hours
         }
-        if (this.config.type === "go" || this.config.type === "id") {
+        if (this.config.type === "go" || this.config.type === "id" || this.config.type === "skodae") {
             resolve();
             return;
         }
@@ -1142,7 +1175,9 @@ class VwWeConnect {
         let rtoken = this.config.rtoken;
         let body = "refresh_token=" + rtoken;
         let form = "";
-        body = "brand=" + this.config.type + "&" + body;
+        const brand = this.config.type === "skodae" ? "skoda" : this.config.type;
+
+        body = "brand=" + brand + "&" + body;
 
         if (isVw) {
             url = "https://mbboauth-1d.prd.ece.vwg-connect.com/mbbcoauth/mobile/oauth2/v1/token";
@@ -1409,6 +1444,17 @@ class VwWeConnect {
                     authorization: "Bearer " + this.config.atoken,
                 };
             }
+            if (this.config.type === "skodae") {
+                url = "https://api.connect.skoda-auto.cz//api/v2/garage/vehicles";
+                // @ts-ignore
+                headers = {
+                    accept: "application/json",
+                    "content-type": "application/json;charset=utf-8",
+                    "user-agent": "OneConnect/000000023 CFNetwork/978.0.7 Darwin/18.7.0",
+                    "accept-language": "de-de",
+                    authorization: "Bearer " + this.config.atoken,
+                };
+            }
             request.get(
                 {
                     url: url,
@@ -1493,6 +1539,69 @@ class VwWeConnect {
                             resolve();
                             return;
                         }
+                        if (this.config.type === "skodae") {
+                            body.forEach(async (element) => {
+                                const vin = element.vin;
+                                this.vinArray.push(vin);
+                                await this.setObjectNotExistsAsync(element.vin, {
+                                    type: "device",
+                                    common: {
+                                        name: element.specification.title,
+                                        role: "indicator",
+                                        type: "string",
+                                        write: false,
+                                        read: true,
+                                    },
+                                    native: {},
+                                });
+
+                                 this.extractKeys(this, element.vin + ".general", element).catch((error) => {
+                                    this.log.error("Failed to extract");
+                                    this.log.error(error);
+                                });
+
+                                 this.setObjectNotExists(vin + ".remote", {
+                                    type: "state",
+                                    common: {
+                                        name: "Remote controls",
+                                        write: true,
+                                    },
+                                    native: {},
+                                });
+                                this.setObjectNotExists(vin + ".remote.charging", {
+                                    type: "state",
+                                    common: {
+                                        name: "Start/Stop Battery Charge",
+                                        type: "boolean",
+                                        role: "boolean",
+                                        write: true,
+                                    },
+                                    native: {},
+                                });
+                                this.setObjectNotExists(vin + ".remote.air-conditioning", {
+                                    type: "state",
+                                    common: {
+                                        name: "Start/Stop Air-conditioning",
+                                        type: "boolean",
+                                        role: "boolean",
+                                        write: true,
+                                    },
+                                    native: {},
+                                });
+                                this.setObjectNotExists(vin + ".remote.targetTemperatureInCelsius", {
+                                    type: "state",
+                                    common: {
+                                        name: "Air-conditioning Temp in Celsius",
+                                        type: "number",
+                                        role: "value.temperature",
+                                        write: true,
+                                    },
+                                    native: {},
+                                });
+                            });
+                            resolve();
+                            return;
+                        }                      
                         if (!body.userVehicles) {
                             this.log.info("No Vehicles found");
                             resolve();
@@ -1515,6 +1624,153 @@ class VwWeConnect {
         this.log.debug("END getVehicles");
     }
 
+getSkodaEStatus(vin) {
+        return new Promise((resolve, reject) => {
+            const typeArray = ["air-conditioning", "charging"];
+            const promiseArray = [];
+            typeArray.forEach((element) => {
+                let promise = this.getSkodaEValues(vin, element, "status");
+                promiseArray.push(promise);
+                promise = this.getSkodaEValues(vin, element, "settings");
+                promiseArray.push(promise);
+            });
+            Promise.all(promiseArray)
+                .then(() => {
+                    resolve();
+                })
+                .catch(() => {
+                    reject();
+                });
+        });
+    }
+
+     getSkodaEValues(vin, type, endpoint) {
+        return new Promise((resolve, reject) => {
+            const url = "https://api.connect.skoda-auto.cz/api/v1/" + type + "/" + vin + "/" + endpoint;
+            this.log.debug(url);
+            request.get(
+                {
+                    url: url,
+
+                     headers: {
+                        "api-key": "ok",
+                        accept: "application/json",
+                        "content-type": "application/json;charset=utf-8",
+                        "user-agent": "OneConnect/000000023 CFNetwork/978.0.7 Darwin/18.7.0",
+                        "accept-language": "de-de",
+                        "If-None-Match": this.etags[url] || "",
+                        authorization: "Bearer " + this.config.atoken,
+                    },
+                    followAllRedirects: true,
+                    gzip: true,
+                    json: true,
+                },
+                (err, resp, body) => {
+                    if (err || (resp && resp.statusCode >= 400)) {
+                        err && this.log.debug(err);
+                        resp && this.log.debug(resp.statusCode.toString());
+                        body && this.log.debug(JSON.stringify(body));
+                        reject();
+                        return;
+                    }
+                    if (resp) {
+                        this.etags[url] = resp.headers.etag;
+                        if (resp.statusCode === 304) {
+                            this.log.debug("304 No values updated");
+                            resolve();
+                            return;
+                        }
+                    }
+                    this.log.debug(JSON.stringify(body));
+                    try {
+                        this.extractKeys(this, vin + ".status." + type + "." + endpoint, body);
+                        resolve();
+                    } catch (err) {
+                        this.log.error(err);
+                        reject();
+                    }
+                }
+            );
+        });
+    }
+  
+    setSkodaESettings(vin, action, value, bodyContent) {
+        return new Promise(async (resolve, reject) => {
+            const pre = this.name + "." + this.instance;
+            let body = bodyContent || {};
+            if (value !== "UpdateSettings") {
+                const states = await this.getStatesAsync(pre + "." + vin + ".status." + action + ".settings.*");
+                body = {};
+                const allIds = Object.keys(states);
+                allIds.forEach((keyName) => {
+                    const keyNameArray = keyName.split(".");
+                    const key = keyNameArray[keyNameArray.length - 1];
+                    const subKey = keyNameArray[keyNameArray.length - 2];
+                    if (subKey === "settings" && states[keyName]) {
+                        body[key] = states[keyName].val;
+                    } else if (states[keyName]) {
+                        if (!body[subKey]) {
+                            body[subKey] = {};
+                        }
+                        body[subKey][key] = states[keyName].val;
+                    }
+                });
+            }
+            const settingsName = this.toCammelCase(action) + "Settings";
+            const finalBody = {
+                type: value,
+            };
+            finalBody[settingsName] = body;
+            const method = "POST";
+            const url = "https://api.connect.skoda-auto.cz/api/v1/" + action + "/operation-requests?vin=" + vin;
+            this.log.debug(url);
+            this.log.debug(JSON.stringify(finalBody));
+            request(
+                {
+                    method: method,
+                    url: url,
+                    headers: {
+                        "api-key": "ok",
+                        accept: "application/json",
+                        "content-type": "application/json;charset=utf-8",
+                        "user-agent": "OneConnect/000000023 CFNetwork/978.0.7 Darwin/18.7.0",
+                        "accept-language": "de-de",
+                        authorization: "Bearer " + this.config.atoken,
+                    },
+                    body: finalBody,
+                    followAllRedirects: true,
+                    json: true,
+                    gzip: true,
+                },
+                (err, resp, body) => {
+                    if (err || (resp && resp.statusCode >= 400)) {
+                        if (resp && resp.statusCode === 401) {
+                            err && this.log.error(err);
+                            resp && this.log.error(resp.statusCode.toString());
+                            body && this.log.error(JSON.stringify(body));
+                            this.refreshToken().catch(() => {});
+                            this.log.error("Refresh Token");
+                            reject();
+                            return;
+                        }
+                        err && this.log.error(err);
+                        resp && this.log.error(resp.statusCode.toString());
+                        body && this.log.error(JSON.stringify(body));
+                        reject();
+                        return;
+                    }
+                    try {
+                        this.log.debug(JSON.stringify(body));
+                        resolve();
+                    } catch (err) {
+                        this.log.error(err);
+                        reject();
+                    }
+                }
+            );
+        });
+    }
+  
     getWcData(limit) {
         if (!limit) {
             limit = 25;
@@ -2721,6 +2977,12 @@ class VwWeConnect {
             result += characters.charAt(Math.floor(Math.random() * charactersLength));
         }
         return result;
+    }
+  
+    toCammelCase(string) {
+        return string.replace(/-([a-z])/g, function (g) {
+            return g[1].toUpperCase();
+        });
     }
 
     extractHidden(body) {
