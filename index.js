@@ -1543,61 +1543,6 @@ class VwWeConnect {
                             body.forEach(async (element) => {
                                 const vin = element.vin;
                                 this.vinArray.push(vin);
-                                await this.setObjectNotExistsAsync(element.vin, {
-                                    type: "device",
-                                    common: {
-                                        name: element.specification.title,
-                                        role: "indicator",
-                                        type: "string",
-                                        write: false,
-                                        read: true,
-                                    },
-                                    native: {},
-                                });
-
-                                 this.extractKeys(this, element.vin + ".general", element).catch((error) => {
-                                    this.log.error("Failed to extract");
-                                    this.log.error(error);
-                                });
-
-                                 this.setObjectNotExists(vin + ".remote", {
-                                    type: "state",
-                                    common: {
-                                        name: "Remote controls",
-                                        write: true,
-                                    },
-                                    native: {},
-                                });
-                                this.setObjectNotExists(vin + ".remote.charging", {
-                                    type: "state",
-                                    common: {
-                                        name: "Start/Stop Battery Charge",
-                                        type: "boolean",
-                                        role: "boolean",
-                                        write: true,
-                                    },
-                                    native: {},
-                                });
-                                this.setObjectNotExists(vin + ".remote.air-conditioning", {
-                                    type: "state",
-                                    common: {
-                                        name: "Start/Stop Air-conditioning",
-                                        type: "boolean",
-                                        role: "boolean",
-                                        write: true,
-                                    },
-                                    native: {},
-                                });
-                                this.setObjectNotExists(vin + ".remote.targetTemperatureInCelsius", {
-                                    type: "state",
-                                    common: {
-                                        name: "Air-conditioning Temp in Celsius",
-                                        type: "number",
-                                        role: "value.temperature",
-                                        write: true,
-                                    },
-                                    native: {},
-                                });
                             });
                             resolve();
                             return;
@@ -1683,7 +1628,7 @@ getSkodaEStatus(vin) {
                     }
                     this.log.debug(JSON.stringify(body));
                     try {
-                        this.extractKeys(this, vin + ".status." + type + "." + endpoint, body);
+                        //this.extractKeys(this, vin + ".status." + type + "." + endpoint, body);
                         resolve();
                     } catch (err) {
                         this.log.error(err);
