@@ -139,7 +139,11 @@ class VwWeConnect {
     }
 
     finishedReading() {
-      this.log.debug(" Id: " + this.boolFinishIdData +
+      if (this.config.type === "skodae") {
+        this.boolFinishIdData = this.boolFinishSkodaEData;
+      }
+      
+      this.log.debug(" Id/SkodaE: " + this.boolFinishIdData +
                      " HomeCharge: " + this.boolFinishHomecharging +
                      " ChargePay: " + this.boolFinishChargeAndPay +
                      " Stat: " + this.boolFinishStations +
@@ -1626,7 +1630,11 @@ getSkodaEStatus(vin) {
                             return;
                         }
                     }
-                    this.log.debug(JSON.stringify(body));
+
+                    this.log.debug("getSkodaEValues: " + JSON.stringify(body));
+                    this.skodaEData = body;
+                    this.boolFinishSkodaEData = true;
+                  
                     try {
                         //this.extractKeys(this, vin + ".status." + type + "." + endpoint, body);
                         resolve();
