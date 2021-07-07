@@ -296,5 +296,7 @@ Stop charging.
   "error": {}
 }
 ```
+#### vwConn.skodaEData - Car data for Skoda MEB based cars (type "skodae")
+tbd - anyone with an electric Skoda please fill in the structure :)
 
 #### vwConn.carData - Car data for all others? Can't test it.
