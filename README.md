@@ -50,7 +50,7 @@ All methods work with promises.
 Login credentials. Pin is not needed for the ID connect, but probably for other car types.
 
 #### vwConn.setConfig(type)
-Set the login type. "id" for the ID series. Other possible values "vw", "skoda", "seat", "audi", "vwv2" and "go".
+Set the config type. "id" for the ID series. Other possible values "vw", "skoda", "skodae", "seat", "audi", "vwv2" and "go". "seatelli" for Seat/Elli wallbox.
 
 #### vwConn.setLogLevel(logLevel)
 Set/change the log level to "DEBUG", "INFO" or "ERROR" (default).
@@ -296,5 +296,7 @@ Stop charging.
   "error": {}
 }
 ```
+#### vwConn.skodaEData - Car data for Skoda MEB based cars (type "skodae")
+tbd - anyone with an electric Skoda please fill in the structure :)
 
 #### vwConn.carData - Car data for all others? Can't test it.
