@@ -50,7 +50,10 @@ All methods work with promises.
 Login credentials. Pin is not needed for the ID connect, but probably for other car types.
 
 #### vwConn.setConfig(type)
-Set the login type. "id" for the ID series. Other possible values "vw", "skoda", "seat", "audi", "vwv2" and "go".
+Set the login type.
+- "id" for the ID series.
+- "idCharger" for ID Charger without an ID linked to the account.
+- Other possible values "vw", "skoda", "seat", "audi", "vwv2" and "go".
 
 #### vwConn.setLogLevel(logLevel)
 Set/change the log level to "DEBUG", "INFO" or "ERROR" (default).
