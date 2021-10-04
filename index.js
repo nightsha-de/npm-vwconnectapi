@@ -147,9 +147,9 @@ class VwWeConnect {
                      /*" Car: " + this.boolFinishCarData*/
                      " Vehic: " + this.boolFinishVehicles);
       return (this.boolFinishIdData || this.config.chargerOnly)
-          && this.boolFinishHomecharging
-          && this.boolFinishChargeAndPay
-          && this.boolFinishStations
+          && (this.boolFinishHomecharging || this.config.noCharger)
+          && this.boolFinishChargeAndPay || this.config.noCharger)
+          && this.boolFinishStations || this.config.noCharger)
           /*&& this.boolFinishCarData*/
           && this.boolFinishVehicles;
     }
@@ -174,6 +174,17 @@ class VwWeConnect {
         else
         {
           this.config.type = pType;
+        }
+    }
+  
+    setCheckCharger(pBool) {
+        if (pBool == false)
+        {
+            this.config.noCharger = true; 
+        }
+        else
+        {
+            this.config.noCharger = false;
         }
     }
 
