@@ -148,8 +148,8 @@ class VwWeConnect {
                      " Vehic: " + this.boolFinishVehicles);
       return (this.boolFinishIdData || this.config.type != "id" || this.config.chargerOnly)
           && (this.boolFinishHomecharging || this.config.noCharger)
-          && this.boolFinishChargeAndPay || this.config.noCharger)
-          && this.boolFinishStations || this.config.noCharger)
+          && (this.boolFinishChargeAndPay || this.config.noCharger)
+          && (this.boolFinishStations || this.config.noCharger)
           && (this.boolFinishCarData || this.config.type == "id")
           && this.boolFinishVehicles;
     }
