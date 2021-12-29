@@ -2410,36 +2410,10 @@ class VwWeConnect {
 
     updateUnit(pathString, unit) {
         const adapter = this;
-        this.getObject(pathString, function (err, obj) {
-            if (err) adapter.log.error('Error "' + err + '" reading object ' + pathString + " for unit");
-            else {
-                if (obj && obj.common && obj.common.unit !== unit) {
-                    adapter.extendObject(pathString, {
-                        type: "state",
-                        common: {
-                            unit: unit,
-                        },
-                    });
-                }
-            }
-        });
     }
 
     updateName(pathString, name) {
         const adapter = this;
-        this.getObject(pathString, function (err, obj) {
-            if (err) adapter.log.error('Error "' + err + '" reading object ' + pathString + " for name");
-            else {
-                if (obj && obj.common && obj.common.name !== name) {
-                    adapter.extendObject(pathString, {
-                        type: "channel",
-                        common: {
-                            name: name,
-                        },
-                    });
-                }
-            }
-        });
     }
 
     setVehicleStatus(vin, url, body, contentType, secToken) {
