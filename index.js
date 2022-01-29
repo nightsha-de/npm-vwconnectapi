@@ -174,6 +174,10 @@ class VwWeConnect {
     setConfig(pType) {
         this.config.type = pType;
     }
+  
+    setHistoryLimit(pLimit) {
+        this.config.historyLimit = pLimit;
+    }
 
     setActiveVin(pVin) {
         if (this.vinArray.includes(pVin)) {
@@ -184,6 +188,10 @@ class VwWeConnect {
         }
     }
 
+    restart() {
+      // dummy
+    }
+  
     stopCharging() {
       return new Promise(async (resolve, reject) => {
         this.log.debug("stopCharging >>");
