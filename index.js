@@ -58,7 +58,8 @@ class VwWeConnect {
         logLevel: "ERROR",
         targetTempC: -1,
         targetSOC: -1,
-        historyLimit: 100
+        historyLimit: 100,
+        chargerOnly: false
     }
 
     currSession = {
@@ -152,7 +153,7 @@ class VwWeConnect {
                      " Stat: " + this.boolFinishStations +
                      /*" Car: " + this.boolFinishCarData*/
                      " Vehic: " + this.boolFinishVehicles);
-      return this.boolFinishIdData
+      return (this.boolFinishIdData || this.config.chargerOnly)
           && this.boolFinishHomecharging
           && this.boolFinishChargeAndPay
           && this.boolFinishStations
@@ -172,7 +173,15 @@ class VwWeConnect {
     }
 
     setConfig(pType) {
-        this.config.type = pType;
+        if (pType == "idCharger")
+        {
+          this.config.type = "id";
+          this.config.chargerOnly = true;
+        }
+        else
+        {
+          this.config.type = pType;
+        }
     }
   
     setHistoryLimit(pLimit) {
