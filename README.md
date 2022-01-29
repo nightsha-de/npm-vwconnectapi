@@ -16,6 +16,7 @@ var vwConn = new api.VwWeConnect();
 vwConn.setLogLevel("INFO"); // optional, ERROR (default), INFO, WARN or DEBUG
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
 vwConn.setConfig("id"); // type
+vwConn.setHistoryLimit(20); // optional: max number of charging records to receive, default 100
 vwConn.getData()
   .then(() => {
     log.info("SOC " + vwConn.idData.data.batteryStatus.currentSOC_pct + "%");
