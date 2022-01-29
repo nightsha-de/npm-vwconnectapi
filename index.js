@@ -1,12 +1,11 @@
 "use strict";
 
-// latest checked version of ioBroker.vw-connect: latest // https://github.com/TA2k/ioBroker.vw-connect/commit/994c2cdf28b3d853c3d1792cd3704d9b9c4d4455
+// latest checked version of ioBroker.vw-connect: latest // https://github.com/TA2k/ioBroker.vw-connect/commit/604cdc1aacee0d13f189829aed985f35281f2016
 
-const request = require("request");
-const crypto = require("crypto");
 const { Crypto } = require("@peculiar/webcrypto");
 const { v4: uuidv4 } = require("uuid");
 const traverse = require("traverse");
+const geohash = require("ngeohash");
 
 class Log {
   constructor(logLevel) {
@@ -56,7 +55,8 @@ class VwWeConnect {
         numberOfTrips: 1,
         logLevel: "ERROR",
         targetTempC: -1,
-        targetSOC: -1
+        targetSOC: -1,
+        historyLimit: 100
     }
 
     currSession = {
@@ -73,6 +73,7 @@ class VwWeConnect {
 
         this.log = new Log(this.config.logLevel);
         this.jar = request.jar();
+        this.userAgent = "ioBroker v47";
 
         this.refreshTokenInterval = null;
         this.vwrefreshTokenInterval = null;
@@ -362,10 +363,10 @@ class VwWeConnect {
         if (this.config.type === "skoda") {
             this.type = "Skoda";
             this.country = "CZ";
-            this.clientId = "7f045eee-7003-4379-9968-9355ed2adb06%40apps_vw-dilab_com";
-            this.xclientId = "28cd30c6-dee7-4529-a0e6-b1e07ff90b79";
-            this.scope = "openid%20profile%20phone%20address%20cars%20email%20birthdate%20badge%20dealers%20driversLicense%20mbb";
-            this.redirect = "skodaconnect%3A%2F%2Foidc.login%2F";
+            this.clientId = "f9a2359a-b776-46d9-bd0c-db1904343117@apps_vw-dilab_com";
+            this.xclientId = "afb0473b-6d82-42b8-bfea-cead338c46ef";
+            this.scope = "openid mbb profile";
+            this.redirect = "skodaconnect://oidc.login/";
             this.xrequest = "cz.skodaauto.connect";
             this.responseType = "code%20id_token";
             this.xappversion = "3.2.6";
@@ -375,7 +376,7 @@ class VwWeConnect {
             this.type = "Skoda";
             this.country = "CZ";
             this.clientId = "f9a2359a-b776-46d9-bd0c-db1904343117@apps_vw-dilab_com";
-            this.xclientId = "28cd30c6-dee7-4529-a0e6-b1e07ff90b79";
+            this.xclientId = "afb0473b-6d82-42b8-bfea-cead338c46ef";
             this.scope = "openid mbb profile";
             this.redirect = "skodaconnect://oidc.login/";
             this.xrequest = "cz.skodaauto.connect";
@@ -420,6 +421,14 @@ class VwWeConnect {
             this.xappversion = "3.22.0";
             this.xappname = "myAudi";
         }
+        if (this.config.type === "audidata") {
+            this.type = "Audi";
+            this.country = "DE";
+            this.clientId = "ec6198b1-b31e-41ec-9a69-95d42d6497ed@apps_vw-dilab_com";
+            this.scope = "openid profile address email phone";
+            this.redirect = "acpp://de.audi.connectplugandplay/oauth2redirect/identitykit";
+            this.responseType = "code";
+        }
         if (this.config.type === "go") {
             this.type = "";
             this.country = "";
@@ -439,6 +448,18 @@ class VwWeConnect {
             this.xclientId = "";
             this.scope = "openid profile";
             this.redirect = "Seat-elli-hub://opid";
+            this.xrequest = "";
+            this.responseType = "code";
+            this.xappversion = "";
+            this.xappname = "";
+        }
+        if (this.config.type === "skodapower") {
+            this.type = "";
+            this.country = "";
+            this.clientId = "b84ba8a1-7925-43c9-9963-022587faaac5@apps_vw-dilab_com";
+            this.xclientId = "";
+            this.scope = "openid profile";
+            this.redirect = "skoda-hub://opid";
             this.xrequest = "";
             this.responseType = "code";
             this.xappversion = "";
@@ -471,6 +492,10 @@ class VwWeConnect {
                                             this.getIdStatus(vin).catch(() => {
                                                 this.log.error("get id status Failed");
                                             });
+                                        } else if (this.config.type === "audidata") {
+                                            this.getAudiDataStatus(vin).catch(() => {
+                                                this.log.error("get audi data status Failed");
+                                            });
                                         } else if (this.config.type === "skodae") {
                                             this.clientId = "7f045eee-7003-4379-9968-9355ed2adb06%40apps_vw-dilab_com";
                                             this.scope = "openid dealers profile email cars address";
@@ -484,7 +509,7 @@ class VwWeConnect {
                                                 })
                                                 .catch(() => {
                                                     this.log.error("Failed second skoda login");
-                                                });                                          
+                                                });
                                         } else {
                                             this.getHomeRegion(vin)
                                                 .catch(() => {
@@ -534,51 +559,11 @@ class VwWeConnect {
                                 }
 
                                 this.updateInterval = setInterval(() => {
-                                    if (this.config.type === "go") {
-                                        this.getVehicles();
-                                        return;
-                                    } else if (this.config.type === "skodae") {
-                                        this.vinArray.forEach((vin) => {
-                                            this.getSkodaEStatus(vin).catch(() => {
-                                                this.log.error("get skodae status Failed");
-                                            });
-                                        });
-                                    } else if (this.config.type === "id") {
-                                        this.vinArray.forEach((vin) => {
-                                            this.getIdStatus(vin).catch(() => {
-                                                this.log.error("get id status Failed");
-                                                this.refreshIDToken().catch(() => {});
-                                            });
-                                            this.getWcData();
-                                        });
-                                        return;
-                                    } else if (this.config.type === "seatelli") {
-                                        this.getSeatElliData().catch(() => {
-                                            this.log.error("get seatelli Failed");
-                                        });
+                                    this.updateStatus();
+                                    },
+                                this.config.interval * 60 * 1000);
 
-                                        return;
-                                    } else {
-                                        this.vinArray.forEach((vin) => {
-                                            this.statesArray.forEach((state) => {
-                                                if (state.path == "tripdata") {
-                                                    this.tripTypes.forEach((tripType) => {
-                                                        this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2, null, null, tripType).catch(() => {
-                                                            this.log.debug("error while getting " + state.url);
-                                                        });
-                                                    });
-                                                } else {
-                                                    this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2).catch(() => {
-                                                        this.log.debug("error while getting " + state.url);
-                                                    });
-                                                }
-
-                                            });
-                                        });
-                                    }
-                                }, this.config.interval * 60 * 1000);
-
-                                if (this.config.type !== "id") {
+                                if (this.config.type !== "id" && this.config.type !== "skodae") {
                                     if (this.config.forceinterval > 0) {
                                         this.fupdateInterval = setInterval(() => {
                                             if (this.config.type === "go") {
@@ -594,9 +579,9 @@ class VwWeConnect {
                                     }
                                 }
                           
-                                if (this.config.type === "seatelli") {
-                                    this.getSeatElliData().catch(() => {
-                                        this.log.error("get seatelli Failed");
+                                if (this.config.type === "seatelli" || this.config.type === "skodapower") {
+                                    this.getElliData(this.config.type).catch(() => {
+                                        this.log.error("get elli Failed");
                                     });
                                 }
                             })
@@ -623,7 +608,7 @@ class VwWeConnect {
 
             let [code_verifier, codeChallenge] = this.getCodeChallenge();
 
-            if (this.config.type === "seatelli") {
+            if (this.config.type === "seatelli" || this.config.type === "skodapower") {
                 [code_verifier, codeChallenge] = this.getCodeChallengev2();
             }
 
@@ -642,7 +627,14 @@ class VwWeConnect {
                 nonce +
                 "&state=" +
                 state;
-            if (this.config.type === "vw" || this.config.type === "vwv2" || this.config.type === "go" || this.config.type === "seatelli") {
+            if (
+                this.config.type === "vw" ||
+                this.config.type === "vwv2" ||
+                this.config.type === "go" ||
+                this.config.type === "seatelli" ||
+                this.config.type === "skodapower" ||
+                this.config.type === "audidata"
+            ) {
                 url += "&code_challenge=" + codeChallenge + "&code_challenge_method=S256";
             }
             if (this.config.type === "audi") {
@@ -661,7 +653,7 @@ class VwWeConnect {
                     method: method,
                     url: url,
                     headers: {
-                        "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                        "User-Agent": this.userAgent,
                         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                         "Accept-Language": "en-US,en;q=0.9",
                         "Accept-Encoding": "gzip, deflate",
@@ -719,7 +711,7 @@ class VwWeConnect {
                                 url: "https://identity.vwgroup.io/signin-service/v1/" + this.clientId + "/login/identifier",
                                 headers: {
                                     "Content-Type": "application/x-www-form-urlencoded",
-                                    "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                    "User-Agent": this.userAgent,
                                     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                                     "Accept-Language": "en-US,en;q=0.9",
                                     "Accept-Encoding": "gzip, deflate",
@@ -740,10 +732,20 @@ class VwWeConnect {
                                     return;
                                 }
                                 try {
-                                    if (body.indexOf("credentialsForm") !== -1) {
-                                        this.log.debug("credentialsForm");
-                                        form = this.extractHidden(body);
-                                        form["password"] = this.config.password;
+                                    if (body.indexOf("emailPasswordForm") !== -1) {
+                                        this.log.debug("emailPasswordForm2");
+                                        /*
+                                        const stringJson =body.split("window._IDK = ")[1].split(";")[0].replace(/\n/g, "")
+                                        const json =stringJson.replace(/(['"])?([a-z0-9A-Z_]+)(['"])?:/g, '"$2": ').replace(/'/g, '"')
+                                        const jsonObj = JSON.parse(json);
+                                        */
+                                        form = {
+                                            _csrf: body.split("csrf_token: '")[1].split("'")[0],
+                                            email: this.config.user,
+                                            password: this.config.password,
+                                            hmac: body.split('"hmac":"')[1].split('"')[0],
+                                            relayState: body.split('"relayState":"')[1].split('"')[0],
+                                        };
                                     } else {
                                         this.log.error("No Login Form found. Please check your E-Mail in the app.");
                                         this.log.debug(JSON.stringify(body));
@@ -755,7 +757,7 @@ class VwWeConnect {
                                             url: "https://identity.vwgroup.io/signin-service/v1/" + this.clientId + "/login/authenticate",
                                             headers: {
                                                 "Content-Type": "application/x-www-form-urlencoded",
-                                                "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                "User-Agent": this.userAgent,
                                                 Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                                                 "Accept-Language": "en-US,en;q=0.9",
                                                 "Accept-Encoding": "gzip, deflate",
@@ -791,8 +793,7 @@ class VwWeConnect {
                                                             url: "https://" + resp.request.host + resp.headers.location,
                                                             jar: this.jar,
                                                             headers: {
-                                                                "User-Agent":
-                                                                    "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                                "User-Agent": this.userAgent,
                                                                 Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                                                                 "Accept-Language": "en-US,en;q=0.9",
                                                                 "Accept-Encoding": "gzip, deflate",
@@ -814,8 +815,7 @@ class VwWeConnect {
                                                                     jar: this.jar,
                                                                     headers: {
                                                                         "Content-Type": "application/x-www-form-urlencoded",
-                                                                        "User-Agent":
-                                                                            "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                                        "User-Agent": this.userAgent,
                                                                         Accept:
                                                                             "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                                                                         "Accept-Language": "en-US,en;q=0.9",
@@ -864,8 +864,7 @@ class VwWeConnect {
                                                     {
                                                         url: resp.headers.location || "",
                                                         headers: {
-                                                            "User-Agent":
-                                                                "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                            "User-Agent": this.userAgent,
                                                             Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                                                             "Accept-Language": "en-US,en;q=0.9",
                                                             "Accept-Encoding": "gzip, deflate",
@@ -888,8 +887,7 @@ class VwWeConnect {
                                                                     url: getRequest.uri.href,
                                                                     headers: {
                                                                         "Content-Type": "application/x-www-form-urlencoded",
-                                                                        "User-Agent":
-                                                                            "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.185 Mobile Safari/537.36",
+                                                                        "User-Agent": this.userAgent,
                                                                         Accept:
                                                                             "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                                                                         "Accept-Language": "en-US,en;q=0.9",
@@ -906,7 +904,7 @@ class VwWeConnect {
                                                                     if (err) {
                                                                         this.getTokens(getRequest, code_verifier, reject, resolve);
                                                                     } else {
-                                                                        this.log.error("No Token received.");
+                                                                        this.log.error("No Token received. Please try to logout and login in the VW app or select type VWv2 in the settings");
                                                                         try {
                                                                             this.log.debug(JSON.stringify(body));
                                                                         } catch (err) {
@@ -943,6 +941,56 @@ class VwWeConnect {
         });
     }
 
+    updateStatus() {
+        if (this.config.type === "go") {
+            this.getVehicles();
+            return;
+        } else if (this.config.type === "skodae") {
+            this.vinArray.forEach((vin) => {
+                this.getSkodaEStatus(vin).catch(() => {
+                    this.log.error("get skodae status Failed");
+                });
+            });
+        } else if (this.config.type === "audidata") {
+            this.vinArray.forEach((vin) => {
+                this.getAudiDataStatus(vin).catch(() => {
+                    this.log.error("get audi data status Failed");
+                });
+            });
+        } else if (this.config.type === "id") {
+            this.vinArray.forEach((vin) => {
+                this.getIdStatus(vin).catch(() => {
+                    this.log.error("get id status Failed");
+                    this.refreshIDToken().catch(() => {});
+                });
+                this.getWcData();
+            });
+            return;
+        } else if (this.config.type === "seatelli" || this.config.type === "skodapower") {
+            this.getElliData(this.config.type).catch(() => {
+                this.log.error("get elli Failed");
+            });
+
+             return;
+        } else {
+            this.vinArray.forEach((vin) => {
+                this.statesArray.forEach((state) => {
+                    if (state.path == "tripdata") {
+                        this.tripTypes.forEach((tripType) => {
+                            this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2, null, null, tripType).catch(() => {
+                                this.log.debug("error while getting " + state.url);
+                            });
+                        });
+                    } else {
+                        this.getVehicleStatus(vin, state.url, state.path, state.element, state.element2).catch(() => {
+                            this.log.debug("error while getting " + state.url);
+                        });
+                    }
+                });
+            });
+        }
+    }
+
     receiveLoginUrl() {
         return new Promise((resolve, reject) => {
             request(
@@ -951,7 +999,7 @@ class VwWeConnect {
                     url: "https://login.apps.emea.vwapps.io/authorize?nonce=" + this.randomString(16) + "&redirect_uri=weconnect://authenticated",
                     headers: {
                         Host: "login.apps.emea.vwapps.io",
-                        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Mobile/15E148 Safari/604.1",
+                        "user-agent": this.userAgent,
                         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                         "accept-language": "de-de",
                     },
@@ -1024,7 +1072,7 @@ class VwWeConnect {
         let body = "auth_code=" + jwtauth_code + "&id_token=" + jwtid_token;
         let url = "https://tokenrefreshservice.apps.emea.vwapps.io/exchangeAuthCode";
         let headers = {
-            // "user-agent": "okhttp/3.7.0",
+            // "user-agent": this.userAgent,
             "X-App-version": this.xappversion,
             "content-type": "application/x-www-form-urlencoded",
             "x-app-name": this.xappname,
@@ -1034,6 +1082,7 @@ class VwWeConnect {
             body += "&code_verifier=" + code_verifier;
         } else {
             const brand = this.config.type === "skodae" ? "skoda" : this.config.type;
+            
             body += "&brand=" + brand;
         }
         if (this.config.type === "go") {
@@ -1044,6 +1093,16 @@ class VwWeConnect {
                 "&client_id=" +
                 this.clientId +
                 "&redirect_uri=vwconnect://de.volkswagen.vwconnect/oauth2redirect/identitykit&grant_type=authorization_code&code_verifier=" +
+                code_verifier;
+        }
+        if (this.config.type === "audidata") {
+            url = "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/token";
+            body =
+                "code=" +
+                jwtauth_code +
+                "&client_id=" +
+                this.clientId +
+                "&redirect_uri=acpp://de.audi.connectplugandplay/oauth2redirect/identitykit&grant_type=authorization_code&code_verifier=" +
                 code_verifier;
         }
         if (this.config.type === "id") {
@@ -1063,7 +1122,7 @@ class VwWeConnect {
                 accept: "*/*",
                 "content-type": "application/json",
                 "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
-                "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+                "user-agent": this.userAgent,
                 "accept-language": "de-de",
             };
             if (this.type === "Wc") {
@@ -1077,21 +1136,26 @@ class VwWeConnect {
             this.getVWToken({}, jwtid_token, reject, resolve);
             return;
         }
-        if (this.config.type === "seatelli") {
+        if (this.config.type === "seatelli" || this.config.type === "skodapower") {
             url = "https://api.elli.eco/identity/v1/loginOrSignupWithIdKit";
-
+            let brand = "seat";
+            let redirect = "Seat-elli-hub://opid";
+            if (this.config.type === "skodapower") {
+                brand = "skoda";
+                redirect = "skoda-hub://opid";
+            }
             body = JSON.stringify({
-                brand: "seat",
+                brand: brand,
                 grant_type: "authorization_code",
                 code: jwtauth_code,
-                redirect_uri: "Seat-elli-hub://opid",
+                redirect_uri: redirect,
                 code_verifier: code_verifier,
             });
             // @ts-ignore
             headers = {
                 "Content-Type": "application/json",
                 Accept: "application/json",
-                "User-Agent": "Seat-Prod/1221 CFNetwork/1240.0.4 Darwin/20.5.0",
+                "User-Agent": this.userAgent,
                 "Accept-Language": "de-DE",
             };
         }
@@ -1133,7 +1197,7 @@ class VwWeConnect {
                     this.config.wc_access_token = tokens.wc_access_token;
                     this.config.wc_refresh_token = tokens.refresh_token;
                     this.log.debug("Wallcharging login successfull");
-                    this.getWcData(100);
+                    this.getWcData(this.config.historyLimit);
                     resolve();
                     return;
                 }
@@ -1166,8 +1230,11 @@ class VwWeConnect {
 
             this.config.atoken = tokens.access_token;
             this.config.rtoken = tokens.refresh_token;
-            if (this.config.type === "seatelli") {
+            if (this.config.type === "seatelli" || this.config.type === "skodapower") {
                 this.config.atoken = tokens.token;
+            }
+            if (this.refreshTokenInterval) {
+                clearInterval(this.refreshTokenInterval);
             }
             this.refreshTokenInterval = setInterval(() => {
                 this.refreshToken().catch(() => {
@@ -1175,7 +1242,14 @@ class VwWeConnect {
                 });
             }, 0.9 * 60 * 60 * 1000); // 0.9hours
         }
-        if (this.config.type === "go" || this.config.type === "id" || this.config.type === "skodae" || this.config.type === "seatelli") {
+        if (
+            this.config.type === "go" ||
+            this.config.type === "id" ||
+            this.config.type === "skodae" ||
+            this.config.type === "seatelli" ||
+            this.config.type === "skodapower" ||
+            this.config.type === "audidata"
+        ) {
             resolve();
             return;
         }
@@ -1183,7 +1257,7 @@ class VwWeConnect {
             {
                 url: "https://mbboauth-1d.prd.ece.vwg-connect.com/mbbcoauth/mobile/oauth2/v1/token",
                 headers: {
-                    "User-Agent": "okhttp/3.7.0",
+                    "User-Agent": this.userAgent,
                     "X-App-Version": this.xappversion,
                     "X-App-Name": this.xappname,
                     "X-Client-Id": this.xclientId,
@@ -1211,6 +1285,9 @@ class VwWeConnect {
                     const tokens = JSON.parse(body);
                     this.config.vwatoken = tokens.access_token;
                     this.config.vwrtoken = tokens.refresh_token;
+                    if (this.vwrefreshTokenInterval) {
+                        clearInterval(this.vwrefreshTokenInterval);
+                    }
                     this.vwrefreshTokenInterval = setInterval(() => {
                         this.refreshToken(true).catch(() => {
                             this.log.error("Refresh Token was not successful");
@@ -1230,11 +1307,14 @@ class VwWeConnect {
         let rtoken = this.config.rtoken;
         let body = "refresh_token=" + rtoken;
         let form = "";
-        const brand = this.config.type === "skodae" ? "skoda" : this.config.type;
+        let brand = this.config.type === "skodae" ? "skoda" : this.config.type;
+        if (this.config.type === "vwv2") {
+            brand = "vw";
+        }
 
         body = "brand=" + brand + "&" + body;
         let headers = {
-            "user-agent": "okhttp/3.7.0",
+            "user-agent": this.userAgent,
             "content-type": "application/x-www-form-urlencoded",
             "X-App-version": this.xappversion,
             "X-App-name": this.xappname,
@@ -1256,7 +1336,17 @@ class VwWeConnect {
                 grant_type: "refresh_token",
                 refresh_token: rtoken,
             };
-        } else if (this.config.type === "seatelli") {
+        } else if (this.config.type === "audidata") {
+            url = "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/token";
+            body = "";
+            // @ts-ignore
+            form = {
+                scope: "openid+profile+address+email+phone",
+                client_id: this.clientId,
+                grant_type: "refresh_token",
+                refresh_token: rtoken,
+            };
+        } else if (this.config.type === "seatelli" || this.config.type === "skodapower") {
             url = "https://api.elli.eco/identity/v1/loginOrSignupWithIdkit";
             body = JSON.stringify({
                 brand: "seat",
@@ -1267,7 +1357,7 @@ class VwWeConnect {
             headers = {
                 "Content-Type": "application/json",
                 Accept: "application/json",
-                "User-Agent": "Seat-Prod/1221 CFNetwork/1240.0.4 Darwin/20.5.0",
+                "User-Agent": this.userAgent,
                 "Accept-Language": "de-DE",
             };
         }
@@ -1291,11 +1381,9 @@ class VwWeConnect {
                         body && this.log.error(body);
                         resp && this.log.error(resp.statusCode.toString());
                         setTimeout(() => {
-                            this.log.error("Relogin");
-                            this.login().catch(() => {
-                                this.log.error("Failed relogin");
-                            });
-                        }, 1 * 60 * 1000);
+                            this.log.error("Restart adapter in 10min");
+                            this.restart();
+                        }, 10 * 60 * 1000);
 
                         reject();
                         return;
@@ -1305,7 +1393,9 @@ class VwWeConnect {
                         const tokens = JSON.parse(body);
                         if (tokens.error) {
                             this.log.error(JSON.stringify(body));
+                            clearTimeout(this.refreshTokenTimeout());
                             this.refreshTokenTimeout = setTimeout(() => {
+                                this.refreshTokenTimeout = null;
                                 this.refreshToken(isVw).catch(() => {
                                     this.log.error("refresh token failed");
                                 });
@@ -1348,7 +1438,14 @@ class VwWeConnect {
     getPersonalData() {
         return new Promise((resolve, reject) => {
             this.log.debug("START getPersonalData()");
-            if (this.config.type === "audi" || this.config.type === "go" || this.config.type === "id" || this.config.type === "seatelli") {
+            if (
+                this.config.type === "audi" ||
+                this.config.type === "go" ||
+                this.config.type === "audidata" ||
+                this.config.type === "id" ||
+                this.config.type === "seatelli" ||
+                this.config.type === "skodapower"
+            ) {
                 resolve();
                 return;
             }
@@ -1356,7 +1453,7 @@ class VwWeConnect {
                 {
                     url: "https://customer-profile.apps.emea.vwapps.io/v1/customers/" + this.config.userid + "/personalData",
                     headers: {
-                        "user-agent": "okhttp/3.7.0",
+                        "user-agent": this.userAgent,
                         "X-App-version": this.xappversion,
                         "X-App-name": this.xappname,
                         authorization: "Bearer " + this.config.atoken,
@@ -1398,7 +1495,7 @@ class VwWeConnect {
                 {
                     url: "https://mal-1a.prd.ece.vwg-connect.com/api/cs/vds/v1/vehicles/" + vin + "/homeRegion",
                     headers: {
-                        "user-agent": "okhttp/3.7.0",
+                        "user-agent": this.userAgent,
                         "X-App-version": this.xappversion,
                         "X-App-name": this.xappname,
                         authorization: "Bearer " + this.config.vwatoken,
@@ -1446,7 +1543,7 @@ class VwWeConnect {
                 {
                     url: "https://customer-profile.apps.emea.vwapps.io/v1/customers/" + this.config.userid + "/realCarData",
                     headers: {
-                        "user-agent": "okhttp/3.7.0",
+                        "user-agent": this.userAgent,
                         "X-App-version": this.xappversion,
                         "X-App-name": this.xappname,
                         authorization: "Bearer " + this.config.atoken,
@@ -1484,14 +1581,14 @@ class VwWeConnect {
 
     getVehicles() {
         return new Promise((resolve, reject) => {
-            if (this.config.type === "seatelli") {
+            if (this.config.type === "seatelli" || this.config.type === "skodapower") {
                 resolve();
                 return;
             }
             this.log.debug("START getVehicles");
             let url = this.replaceVarInUrl("https://msg.volkswagen.de/fs-car/usermanagement/users/v1/$type/$country/vehicles");
             let headers = {
-                "User-Agent": "okhttp/3.7.0",
+                "User-Agent": this.userAgent,
                 "X-App-Version": this.xappversion,
                 "X-App-Name": this.xappname,
                 Authorization: "Bearer " + this.config.vwatoken,
@@ -1508,6 +1605,18 @@ class VwWeConnect {
                     accept: "application/json;charset=UTF-8",
                 };
             }
+            if (this.config.type === "audidata") {
+                url = "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/vehicles";
+                // @ts-ignore
+                headers = {
+                    "user-agent": "okhttp/3.9.1",
+                    authorization: "Bearer " + this.config.atoken,
+                    "accept-language": "de-DE",
+                    "dmp-api-version": "v2.0",
+                    "dmp-client-info": this.userAgent,
+                    accept: "application/json;charset=UTF-8",
+                };
+            }
             if (this.config.type === "id") {
                 url = "https://mobileapi.apps.emea.vwapps.io/vehicles";
                 headers = {
@@ -1515,18 +1624,18 @@ class VwWeConnect {
                     "content-type": "application/json",
                     "content-version": "1",
                     "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
-                    "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+                    "user-agent": this.userAgent,
                     "accept-language": "de-de",
                     authorization: "Bearer " + this.config.atoken,
                 };
             }
             if (this.config.type === "skodae") {
-                url = "https://api.connect.skoda-auto.cz//api/v2/garage/vehicles";
+                url = "https://api.connect.skoda-auto.cz/api/v2/garage/vehicles";
                 // @ts-ignore
                 headers = {
                     accept: "application/json",
                     "content-type": "application/json;charset=utf-8",
-                    "user-agent": "OneConnect/000000023 CFNetwork/978.0.7 Darwin/18.7.0",
+                    "user-agent": this.userAgent,
                     "accept-language": "de-de",
                     authorization: "Bearer " + this.config.atoken,
                 };
@@ -1558,7 +1667,10 @@ class VwWeConnect {
                         if (this.config.type === "id") {
                             body.data.forEach((element) => {
                                 const vin = element.vin;
-
+                                if (!vin) {
+                                    this.log.info("No vin found for:" + JSON.stringify(element));
+                                    return;
+                                }
                                 this.vinArray.push(vin);
                             });
                             resolve();
@@ -1599,6 +1711,14 @@ class VwWeConnect {
                             resolve();
                             return;
                         }
+                        if (this.config.type === "audidata") {
+                            body.forEach(async (element) => {
+                                const vin = element.vehicle.vin;
+                                this.vinArray.push(vin);
+                            });
+                            resolve();
+                            return;
+                        }
                         if (this.config.type === "skodae") {
                             body.forEach(async (element) => {
                                 const vin = element.vin;
@@ -1606,7 +1726,7 @@ class VwWeConnect {
                             });
                             resolve();
                             return;
-                        }                      
+                        }
                         if (!body.userVehicles) {
                             this.log.info("No Vehicles found");
                             resolve();
@@ -1661,7 +1781,7 @@ getSkodaEStatus(vin) {
                         "api-key": "ok",
                         accept: "application/json",
                         "content-type": "application/json;charset=utf-8",
-                        "user-agent": "OneConnect/000000023 CFNetwork/978.0.7 Darwin/18.7.0",
+                        "user-agent": this.userAgent,
                         "accept-language": "de-de",
                         "If-None-Match": this.etags[url] || "",
                         authorization: "Bearer " + this.config.atoken,
@@ -1742,7 +1862,7 @@ getSkodaEStatus(vin) {
                         "api-key": "ok",
                         accept: "application/json",
                         "content-type": "application/json;charset=utf-8",
-                        "user-agent": "OneConnect/000000023 CFNetwork/978.0.7 Darwin/18.7.0",
+                        "user-agent": this.userAgent,
                         "accept-language": "de-de",
                         authorization: "Bearer " + this.config.atoken,
                     },
@@ -1780,11 +1900,17 @@ getSkodaEStatus(vin) {
         });
     }
   
-    async getSeatElliData() {
+    async getElliData() {
+        let name = "Seat Elli Data";
+        let path = "seatelli";
+        if (type === "skodapower") {
+            name = "Skoda Powerpass Data";
+            path = "skodapower";
+        }
         const header = {
             "Content-Type": "application/json",
             Accept: "application/json",
-            "User-Agent": "Seat-Prod/1221 CFNetwork/1240.0.4 Darwin/20.5.0",
+            "User-Agent": this.userAgent,
             "Accept-Language": "de-DE",
             Authorization: "Bearer " + this.config.atoken,
         };
@@ -1810,19 +1936,19 @@ getSkodaEStatus(vin) {
                 this.log.error(err);
             });
         });
-        this.genericRequest("https://api.elli.eco/customer/v1/charging/records?limit=100&offset=0", header, "seatelli.records", [404]).catch((hideError, err) => {
+        this.genericRequest("https://api.elli.eco/customer/v1/charging/records?limit=" + this.config.historyLimit + "&offset=0", header, path + ".records", [404]).catch((hideError, err) => {
             if (hideError) {
                 return;
             }
             this.log.error(err);
         });
 
-        this.genericRequest("https://api.elli.eco/chargeathome/v1/stations", header, "seatelli.stations", [404], "stations")
+        this.genericRequest("https://api.elli.eco/chargeathome/v1/stations", header, path + ".stations", [404], "stations")
             .then((body) => {
                 this.stations = body;
                 this.boolFinishStations = true;
                 body.forEach((station) => {
-                    this.genericRequest("https://api.elli.eco/chargeathome/v1/stations/" + station.id, header, "seatelli.stations." + station.name, [404]).catch((hideError) => {
+                    this.genericRequest("https://api.elli.eco/chargeathome/v1/stations/" + station.id, header, path + ".stations." + station.name, [404]).catch((hideError) => {
                         if (hideError) {
                             this.log.debug("Failed to get sessions");
                             return;
@@ -1830,9 +1956,9 @@ getSkodaEStatus(vin) {
                         this.log.error("Failed to get sessions");
                     });
                     this.genericRequest(
-                        "https://api.elli.eco/chargeathome/v1/chargingrecords?station_id=" + station.id + "&limit=100&offset=0",
+                        "https://api.elli.eco/chargeathome/v1/chargingrecords?station_id=" + station.id + "&limit=" + this.config.historyLimit + "&offset=0",
                         header,
-                        "seatelli.stations." + station.name + ".chargingrecords",
+                        path + ".stations." + station.name + ".chargingrecords",
                         [404]
                     ).catch((hideError) => {
                         if (hideError) {
@@ -1842,11 +1968,18 @@ getSkodaEStatus(vin) {
                         this.log.error("Failed to get sessions");
                     });
                     this.genericRequest(
-                        "https://api.elli.eco/chargeathome/v1/chargingrecords/total-charged?station_id=" + station.id + "&limit=100&offset=0",
+                        "https://api.elli.eco/chargeathome/v1/chargingrecords/total-charged?station_id=" + station.id + "&limit=" + this.config.historyLimit + "&offset=0",
                         header,
-                        "seatelli.stations." + station.name + ".chargingrecords.total-charged",
+                        path + ".stations." + station.name + ".chargingrecords.total-charged",
                         [404]
-                    ).catch((hideError) => {
+                    )
+                    .then((body) => {
+                        this.log.debug("elli.homecharging: " + JSON.stringify(body));
+                        this.homechargingRecords = body;
+                        this.boolFinishHomecharging = true;
+                    })
+                    .catch((hideError) => {
+                        this.boolFinishHomecharging = true;
                         if (hideError) {
                             this.log.debug("Failed to get total-charged");
                             return;
@@ -1856,6 +1989,7 @@ getSkodaEStatus(vin) {
                 });
             })
             .catch((hideError, err) => {
+                this.boolFinishStations = true;
                 if (hideError) {
                     this.log.debug("Failed to get stations");
                     this.log.debug(err);
@@ -1875,7 +2009,7 @@ getSkodaEStatus(vin) {
             "content-type": "application/json",
             "content-version": "1",
             "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
-            "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+            "user-agent": this.userAgent,
             "accept-language": "de-de",
             authorization: "Bearer " + this.config.atoken,
             wc_access_token: this.config.wc_access_token,
@@ -2039,7 +2173,7 @@ getSkodaEStatus(vin) {
                         "content-type": "application/json",
                         "content-version": "1",
                         "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
-                        "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+                        "user-agent": this.userAgent,
                         "accept-language": "de-de",
                         authorization: "Bearer " + this.config.atoken,
                     },
@@ -2090,6 +2224,84 @@ getSkodaEStatus(vin) {
                 }
             );
             this.log.debug("END getIdStatus");
+        });
+    }
+
+    getAudiDataStatus(vin) {
+        return new Promise((resolve, reject) => {
+            const statusArray = [
+                {
+                    path: "driverlog",
+                    url: "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/vehicle/" + vin + "/driverlogs?page=0&limit=100&returnPollData=true",
+                },
+                {
+                    path: "lastParkingPosition",
+                    url: "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/vehicle/" + vin + "/last-parking-position",
+                },
+                {
+                    path: "status",
+                    url: "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/vehicles",
+                },
+            ];
+            statusArray.forEach((element) => {
+                const url = element.url;
+                this.log.debug(url);
+                request.get(
+                    {
+                        url: url,
+
+                         headers: {
+                            accept: "application/json;charset=UTF-8",
+                            "dmp-api-version": "v2.0",
+                            "accept-language": "de-DE",
+                            "dmp-client-info": "Android/8.0.0/Audi Connect/App/2.5.0",
+                            "content-type": "application/json;charset=UTF-8",
+                            "user-agent": this.userAgent,
+                            "If-None-Match": this.etags[url] || "",
+                            authorization: "Bearer " + this.config.atoken,
+                        },
+                        followAllRedirects: true,
+                        gzip: true,
+                        json: true,
+                    },
+                    (err, resp, body) => {
+                        if (err || (resp && resp.statusCode >= 400)) {
+                            err && this.log.debug(err);
+                            resp && this.log.debug(resp.statusCode.toString());
+                            body && this.log.debug(JSON.stringify(body));
+                            reject();
+                            return;
+                        }
+                        if (resp) {
+                            this.etags[url] = resp.headers.etag;
+                            if (resp.statusCode === 304) {
+                                this.log.debug("304 No values updated");
+                                resolve();
+                                return;
+                            }
+                        }
+                        let preferedName = null;
+                        if (element.path === "status") {
+                            body = body[0];
+                        }
+                        if (element.path === "driverlog") {
+                            preferedName = "driverLogId";
+                        }
+                        this.log.debug(JSON.stringify(body));
+
+                        this.log.debug("getAudiDataStatus: " + JSON.stringify(body));
+                        this.audiData = body;
+                        this.boolFinishAudiData = true;
+
+                        try {
+                             resolve();
+                        } catch (err) {
+                            this.log.error(err);
+                            reject();
+                        }
+                    }
+                );
+            });
         });
     }
 
@@ -2163,7 +2375,7 @@ getSkodaEStatus(vin) {
                         "content-type": "application/json",
                         accept: "*/*",
                         "accept-language": "de-de",
-                        "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+                        "user-agent": this.userAgent,
                         "content-version": "1",
                         "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
                         authorization: "Bearer " + this.config.atoken,
@@ -2214,7 +2426,7 @@ getSkodaEStatus(vin) {
                         "content-type": "application/json",
                         "content-version": "1",
                         "x-newrelic-id": "VgAEWV9QDRAEXFlRAAYPUA==",
-                        "user-agent": "WeConnect/5 CFNetwork/1206 Darwin/20.1.0",
+                        "user-agent": this.userAgent,
                         "accept-language": "de-de",
                         authorization: "Bearer " + this.config.rtoken,
                     },
@@ -2236,11 +2448,9 @@ getSkodaEStatus(vin) {
                         this.xrequest = "com.volkswagen.weconnect";
                         this.responseType = "code id_token token";
                         setTimeout(() => {
-                            this.log.error("Relogin");
-                            this.login().catch(() => {
-                                this.log.error("Failed relogin");
-                            });
-                        }, 1 * 60 * 1000);
+                            this.log.error("Restart adapter in 10min");
+                            this.restart();
+                        }, 10 * 60 * 1000);
                         reject();
                         return;
                     }
@@ -2282,7 +2492,7 @@ getSkodaEStatus(vin) {
                 {
                     url: url,
                     headers: {
-                        "User-Agent": "okhttp/3.7.0",
+                        "User-Agent": this.userAgent,
                         "X-App-Version": this.xappversion,
                         "X-App-Name": this.xappname,
                         "X-Market": "de_DE",
@@ -2350,7 +2560,7 @@ getSkodaEStatus(vin) {
                         scope: "All",
                     },
                     headers: {
-                        "User-Agent": "okhttp/3.7.0",
+                        "User-Agent": this.userAgent,
                         "X-App-Version": this.xappversion,
                         "X-App-Name": this.xappname,
                         Authorization: "Bearer " + this.config.vwatoken,
@@ -2414,6 +2624,9 @@ getSkodaEStatus(vin) {
                 let url = this.replaceVarInUrl("$homeregion/fs-car/bs/vsr/v1/$type/$country/vehicles/$vin/requests", vin);
 
                 let accept = "application/json";
+                // if (this.config.type === "audi") {
+                //     url = this.replaceVarInUrl("https://mal-3a.prd.eu.dp.vwg-connect.com/api/bs/vsr/v1/vehicles/$vin/requests", vin);
+                // }
                 if (this.config.type === "vw") {
                     accept =
                         "application/vnd.vwg.mbb.VehicleStatusReport_v1_0_0+json, application/vnd.vwg.mbb.climater_v1_0_0+json, application/vnd.vwg.mbb.carfinderservice_v1_0_0+json, application/vnd.volkswagenag.com-error-v1+json, application/vnd.vwg.mbb.genericError_v1_0_2+json";
@@ -2423,12 +2636,13 @@ getSkodaEStatus(vin) {
                      url = this.replaceVarInUrl("$homeregion/fs-car/vehicleMgmt/vehicledata/v2/$type/$country/vehicles/$vin", vin);
                      accept = " application/vnd.vwg.mbb.vehicleDataDetail_v2_1_0+json, application/vnd.vwg.mbb.genericError_v1_0_2+json";
                 }
+                this.log.debug("Request update " + url);
                 request(
                     {
                         method: method,
                         url: url,
                         headers: {
-                            "User-Agent": "okhttp/3.7.0",
+                            "User-Agent": this.userAgent,
                             "X-App-Version": this.xappversion,
                             "X-App-Name": this.xappname,
                             Authorization: "Bearer " + this.config.vwatoken,
@@ -2455,6 +2669,7 @@ getSkodaEStatus(vin) {
                             this.log.debug(JSON.stringify(body));
                             resolve();
                         } catch (err) {
+                            this.log.error("Request update failed: " + url);
                             this.log.error(vin);
                             this.log.error(err);
                             reject();
@@ -2489,7 +2704,7 @@ getSkodaEStatus(vin) {
                 {
                     url: url,
                     headers: {
-                        "User-Agent": "okhttp/3.7.0",
+                        "User-Agent": this.userAgent,
                         "X-App-Version": this.xappversion,
                         "X-App-Name": this.xappname,
                         "If-None-Match": this.etags[url] || "",
@@ -2508,13 +2723,19 @@ getSkodaEStatus(vin) {
                             resolve();
                             return;
                         } else if (resp && resp.statusCode === 401) {
-                             this.log.error(vin);
-                             err && this.log.error(err);
-                             resp && this.log.error(resp.statusCode.toString());
-                             body && this.log.error(JSON.stringify(body));
-                            this.refreshToken(true).catch(() => {
-                                this.log.error("Refresh Token was not successful");
-                            });
+                            this.log.error(vin);
+                            err && this.log.error(err);
+                            resp && this.log.error(resp.statusCode.toString());
+                            body && this.log.error(JSON.stringify(body));
+                            this.log.error("Refresh Token in 10min");
+                            if (!this.refreshTokenTimeout) {
+                                this.refreshTokenTimeout = setTimeout(() => {
+                                    this.refreshTokenTimeout = null;
+                                    this.refreshToken(true).catch(() => {
+                                        this.log.error("Refresh Token was not successful");
+                                    });
+                                }, 10 * 60 * 1000);
+                            }
                             reject();
                             return;
                         } else {
@@ -2555,9 +2776,15 @@ getSkodaEStatus(vin) {
                             if (body && body.error && body.error.description.indexOf("Token expired") !== -1) {
                                 this.log.error("Error response try to refresh token " + path);
                                 this.log.error(JSON.stringify(body));
-                                this.refreshToken(true).catch(() => {
-                                    this.log.error("Refresh Token was not successful");
-                                });
+                                this.log.error("Refresh Token in 10min");
+                                if (!this.refreshTokenTimeout) {
+                                    this.refreshTokenTimeout = setTimeout(() => {
+                                        this.refreshTokenTimeout = null;
+                                        this.refreshToken(true).catch(() => {
+                                            this.log.error("Refresh Token was not successful");
+                                        });
+                                    }, 10 * 60 * 1000);
+                                }
                             } else {
                                 this.log.debug("Not able to get " + path);
                             }
@@ -2789,7 +3016,7 @@ getSkodaEStatus(vin) {
             this.log.debug(body);
             this.log.debug(contentType);
             const headers = {
-                "User-Agent": "okhttp/3.7.0",
+                "User-Agent": this.userAgent,
                 "X-App-Version": this.xappversion,
                 "X-App-Name": this.xappname,
                 Authorization: "Bearer " + this.config.vwatoken,
@@ -2847,7 +3074,7 @@ getSkodaEStatus(vin) {
             this.log.debug(JSON.stringify(body));
             this.log.debug(contentType);
             const headers = {
-                "User-Agent": "okhttp/3.7.0",
+                "User-Agent": this.userAgent,
                 "X-App-Version": this.xappversion,
                 "X-App-Name": this.xappname,
                 Authorization: "Bearer " + this.config.vwatoken,
@@ -2908,7 +3135,7 @@ getSkodaEStatus(vin) {
                 {
                     url: url,
                     headers: {
-                        "user-agent": "okhttp/3.7.0",
+                        "user-agent": this.userAgent,
                         "X-App-version": this.xappversion,
                         "X-App-name": this.xappname,
                         authorization: "Bearer " + this.config.vwatoken,
@@ -2953,7 +3180,7 @@ getSkodaEStatus(vin) {
                                 {
                                     url: url,
                                     headers: {
-                                        "user-agent": "okhttp/3.7.0",
+                                        "user-agent": this.userAgent,
                                         "Content-Type": "application/json",
                                         "X-App-version": this.xappversion,
                                         "X-App-name": this.xappname,
