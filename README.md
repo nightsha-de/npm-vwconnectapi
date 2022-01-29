@@ -16,6 +16,7 @@ var vwConn = new api.VwWeConnect();
 vwConn.setLogLevel("INFO"); // optional, ERROR (default), INFO, WARN or DEBUG
 vwConn.setCredentials("YourEmail", "YourPassword", "YourPin");
 vwConn.setConfig("id"); // type
+vwConn.setHistoryLimit(20); // optional: max number of charging records to receive, default 100
 vwConn.getData()
   .then(() => {
     log.info("SOC " + vwConn.idData.data.batteryStatus.currentSOC_pct + "%");
@@ -53,7 +54,10 @@ Login credentials. Pin is not needed for the ID connect, but probably for other 
 Set the login type.
 - "id" for the ID series.
 - "idCharger" for ID Charger without an ID linked to the account.
-- Other possible values "vw", "skoda", "seat", "audi", "vwv2" and "go".
+- Other possible values "vw", "skoda", "skodae", "seat", "audi", "vwv2" and "go".
+- "seatelli" for Seat/Elli wallbox
+- "audidata" for Audi data
+- "skodapower" for Skoda wallbox
 
 #### vwConn.setLogLevel(logLevel)
 Set/change the log level to "DEBUG", "INFO" or "ERROR" (default).
@@ -299,5 +303,7 @@ Stop charging.
   "error": {}
 }
 ```
+#### vwConn.skodaEData - Car data for Skoda MEB based cars (type "skodae")
+tbd - anyone with an electric Skoda please fill in the structure :)
 
 #### vwConn.carData - Car data for all others? Can't test it.
