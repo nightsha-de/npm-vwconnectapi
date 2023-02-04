@@ -3,7 +3,7 @@ NPM package for a VW Connect API based on https://github.com/TA2k/ioBroker.vw-co
 
 Clone this repository to $path and use
 ```
-sudo npm install -g $path
+sudo npm install --location=global $path
 ```
 to install.
 
