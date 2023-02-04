@@ -2061,11 +2061,8 @@ class VwWeConnect {
               body.forEach(async (element) => {
                 const vin = element.vehicle.vin;
                 this.vinArray.push(vin);
-                                const adapter = this;
-
-                                const result = body.vehicleData;
-
-                                traverse(element).forEach(function (value) {
+                const adapter = this;
+                const result = body.vehicleData;
               });
               resolve();
               return;
@@ -2088,17 +2085,6 @@ class VwWeConnect {
               body.vehicles.forEach(async (element) => {
                 const vin = element.vin;
                 this.vinArray.push(vin);
-                await this.setObjectNotExistsAsync(element.vin, {
-                  type: "device",
-                  common: {
-                    name: element.specification.title,
-                    role: "indicator",
-                    type: "string",
-                    write: false,
-                    read: true,
-                  },
-                  native: {},
-                });
 
                                         if (typeof value === "object") {
                                             value = JSON.stringify(value);
