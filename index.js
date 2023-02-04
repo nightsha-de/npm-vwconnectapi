@@ -15,6 +15,9 @@ const Json2iob = require("./lib/json2iob");
 class Log {
   constructor(logLevel) {
     this.logLevel = logLevel;
+    this.debug("Start logging instance");
+  }
+
   setLogLevel(pLogLevel) {
       this.logLevel = pLogLevel;
   }
