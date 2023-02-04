@@ -2086,8 +2086,9 @@ class VwWeConnect {
                 const vin = element.vin;
                 this.vinArray.push(vin);
 
-                                        if (typeof value === "object") {
-                                            value = JSON.stringify(value);
+                if (typeof value === "object") {
+                    value = JSON.stringify(value);
+                }
               });
               resolve();
               return;
@@ -2102,20 +2103,19 @@ class VwWeConnect {
               body.data.userVehicles.forEach(async (element) => {
                 const vin = element.vin;
                 this.vinArray.push(vin);
-                                });
-                            });
-                            resolve();
-                            return;
-                        }
-                        if (!body.userVehicles) {
-                            this.log.info("No Vehicles found");
-                            resolve();
-                            return;
-                        }
-                        const vehicles = body.userVehicles.vehicle;
-                        vehicles.forEach((vehicle) => {
-                            this.vinArray.push(vehicle);
-                        });
+              });
+              resolve();
+              return;
+            }
+            if (!body.userVehicles) {
+                this.log.info("No Vehicles found");
+                resolve();
+                return;
+            }
+            const vehicles = body.userVehicles.vehicle;
+            vehicles.forEach((vehicle) => {
+                this.vinArray.push(vehicle);
+            });
             resolve();
           } catch (err) {
             this.log.error(err);
