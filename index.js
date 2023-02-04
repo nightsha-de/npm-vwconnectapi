@@ -1418,7 +1418,7 @@ class VwWeConnect {
                     this.config.wc_access_token = tokens.wc_access_token;
                     this.config.wc_refresh_token = tokens.refresh_token;
                     this.log.debug("Wallcharging login successfull");
-                    this.getWcData(100);
+                    this.getWcData(this.config.historyLimit);
                     resolve();
                     return;
                 }
@@ -2359,7 +2359,7 @@ class VwWeConnect {
           url:
             "https://audi-global-dmp.apps.emea.vwapps.io/mobility-platform/vehicle/" +
             vin +
-            "/driverlogs?page=0&limit=100&returnPollData=true",
+            "/driverlogs?page=0&limit=" + this.config.historyLimit + "&returnPollData=true",
         },
         {
           path: "lastParkingPosition",
