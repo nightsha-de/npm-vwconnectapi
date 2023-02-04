@@ -10,7 +10,7 @@ const { v4: uuidv4 } = require("uuid");
 const traverse = require("traverse");
 const geohash = require("ngeohash");
 const axios = require("axios").default;
-const Json2iob = require("./lib/json2iob");
+// const Json2iob = require("./lib/json2iob");
 
 class Log {
   constructor(logLevel) {
@@ -1782,7 +1782,7 @@ class VwWeConnect {
             this.log.debug(JSON.stringify(body));
             const data = JSON.parse(body);
             this.config.identifier = data.businessIdentifierValue;
-            this.json2iob.parse("personal", data, { forceIndex: true });
+            // this.json2iob.parse("personal", data, { forceIndex: true });
 
             resolve();
           } catch (err) {
@@ -2188,7 +2188,7 @@ class VwWeConnect {
           }
 
           // this.extractKeys(this, vin + ".status", data);
-          this.json2iob.parse(vin + ".status", data, { forceIndex: true });
+          // this.json2iob.parse(vin + ".status", data, { forceIndex: true });
           if (this.config.rawJson) {
             this.log.info(".");
 
@@ -4190,7 +4190,7 @@ class VwWeConnect {
               const key = keys[keyIndex];
 
             }
-            this.json2iob.cleanupOtherStatesInChannel(vin + ".position.address", timestamp);
+            // this.json2iob.cleanupOtherStatesInChannel(vin + ".position.address", timestamp);
           } catch (err) {
             this.log.error(err);
           }
