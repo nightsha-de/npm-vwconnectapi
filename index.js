@@ -184,6 +184,10 @@ class VwWeConnect {
         }
     }
 
+    setHistoryLimit(pLimit) {
+        this.config.historyLimit = pLimit;
+    }
+
     setActiveVin(pVin) {
         if (this.vinArray.includes(pVin)) {
             this.currSession.vin = pVin;
