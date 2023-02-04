@@ -1032,8 +1032,6 @@ class VwWeConnect {
     });
   }
 
-    } /* TODO this may be not necessary */
-
   receiveLoginUrl() {
     return new Promise((resolve, reject) => {
       request(
