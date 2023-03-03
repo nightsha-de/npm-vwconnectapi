@@ -1,6 +1,6 @@
 "use strict";
 
-// latest checked version of ioBroker.vw-connect: latest // https://github.com/TA2k/ioBroker.vw-connect/commit/f6d3cd10916c1704b4201a0598e2ecd5a0db3c62
+// latest checked version of ioBroker.vw-connect: 0.62 // https://github.com/TA2k/ioBroker.vw-connect/commit/fc80e6e9cbe52c21a6acbf3fe46653990626c5c0
 
 const request = require("request");
 const qs = require("qs");
@@ -672,6 +672,7 @@ class VwWeConnect {
         return new Promise(async (resolve, reject) => {
             const nonce = this.getNonce();
             const state = uuidv4();
+            this.log.info(`Login in with ${this.config.type}`);
 
       let [code_verifier, codeChallenge] = this.getCodeChallenge();
       if (this.config.type === "seatelli" || this.config.type === "skodapower") {
@@ -713,7 +714,7 @@ class VwWeConnect {
         });
         if (!url) {
           url =
-            "https://login.apps.emea.vwapps.io/authorize?nonce=" +
+            "https://emea.bff.cariad.digital/user-login/v1/authorize?nonce=" +
             this.randomString(16) +
             "&redirect_uri=weconnect://authenticated";
         }
@@ -870,6 +871,7 @@ class VwWeConnect {
                           this.log.warn(
                             "No valid userid, please check username and password or visit this link or logout and login in your app account:",
                           );
+                          this.log.warn("Bitte in die App einloggen und die Nutzungsbedingungen akzeptieren.");
                           this.log.warn("https://" + resp.request.host + resp.headers.location);
                           this.log.warn("Try to auto accept new consent");
 
@@ -892,6 +894,31 @@ class VwWeConnect {
                               this.log.debug(body);
 
                               const form = this.extractHidden(body);
+                              //check for empty form object
+                              if (Object.keys(form).length === 0 && form.constructor === Object) {
+                                try {
+                                  const stringJson = body
+                                    .split("window._IDK = ")[1]
+                                    .split("</")[0]
+                                    .replace(/\n/g, "")
+                                    .replace(/:\/\//g, "")
+                                    .replace(/local:/g, "");
+                                  const json = stringJson
+                                    .replace(/(['"])?([a-z0-9A-Z_]+)(['"])?:/g, '"$2": ')
+                                    .replace(/'/g, '"')
+                                    .replace(/""/g, '"');
+                                  const parsedJson = JSON.parse(json);
+                                  form._csrf = parsedJson.csrf_token;
+                                  form.hmac = parsedJson.templateModel.hmac;
+                                  form.relayState = parsedJson.templateModel.relayState;
+                                  form.legalDocuments = parsedJson.templateModel.legalDocuments;
+                                } catch (error) {
+                                  this.log.error("Error in consent form");
+                                  this.log.error(error);
+                                  reject();
+                                  return;
+                                }
+                              }
                               const url = "https://" + resp.request.host + resp.req.path.split("?")[0];
                               this.log.debug(JSON.stringify(form));
                               request.post(
@@ -907,11 +934,23 @@ class VwWeConnect {
                                     "Accept-Encoding": "gzip, deflate",
                                     "x-requested-with": this.xrequest,
                                   },
-                                  form: form,
+                                  form: qs
+                                    .stringify(form)
+                                    .replace(/true/g, "yes")
+                                    .replace(/false/g, "no")
+                                    .replace(/%5D%5B/g, "%5D.")
+                                    .replace(/%5D=/g, "="),
                                   followAllRedirects: true,
                                   gzip: true,
                                 },
                                 (err, resp, body) => {
+                                  if (err && err.message.indexOf("Invalid protocol:") === 0) {
+                                    this.log.info("Auto accept successful. Restart adapter in 10sec");
+                                    setTimeout(() => {
+                                      this.restart();
+                                    }, 10 * 1000);
+                                    return;
+                                  }
                                   if (
                                     (err && err.message.indexOf("Invalid protocol:") !== -1) ||
                                     (resp && resp.statusCode >= 400)
@@ -971,7 +1010,10 @@ class VwWeConnect {
                               this.getTokens(getRequest, code_verifier, reject, resolve);
                             } else {
                               this.log.debug(body);
-                              this.log.debug("No Token received visiting url and accept the permissions.");
+                              this.log.warn(
+                                "No Token received visiting url and accept the permissions or login and accept",
+                              );
+                              this.log.info(getRequest.uri.href);
                               const form = this.extractHidden(body);
                               getRequest = request.post(
                                 {
@@ -1042,11 +1084,10 @@ class VwWeConnect {
         {
           method: "GET",
           url:
-            "https://login.apps.emea.vwapps.io/authorize?nonce=" +
+            "https://emea.bff.cariad.digital/user-login/v1/authorize?nonce=" +
             this.randomString(16) +
             "&redirect_uri=weconnect://authenticated",
           headers: {
-            Host: "login.apps.emea.vwapps.io",
             "user-agent": this.userAgent,
             accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "accept-language": "de-de",
@@ -1084,42 +1125,40 @@ class VwWeConnect {
     this.log.debug(timestamp.toString());
     //credits to https://github.com/arjenvrh/audi_connect_ha/blob/master/custom_components/audiconnect/audi_services.py
     const xqmauth_secret = Buffer.from([
-      256 - 28,
-      120,
-      102,
-      55,
-      256 - 114,
-      256 - 16,
-      101,
-      256 - 116,
-      256 - 25,
-      93,
+      26,
+      256 - 74,
+      256 - 103,
+      37,
+      256 - 84,
+      23,
+      256 - 102,
+      256 - 86,
+      78,
+      256 - 125,
+      256 - 85,
+      256 - 26,
       113,
-      0,
-      122,
-      256 - 128,
-      256 - 97,
-      52,
-      97,
-      107,
-      256 - 106,
-      53,
-      256 - 30,
-      256 - 20,
-      34,
-      256 - 126,
-      69,
-      120,
-      76,
-      31,
-      99,
-      256 - 24,
-      256 - 115,
+      256 - 87,
+      71,
+      109,
+      23,
+      100,
+      24,
+      256 - 72,
+      91,
+      256 - 41,
       6,
+      256 - 15,
+      67,
+      108,
+      256 - 26,
+      71,
+      256 - 104,
+      256 - 100,
     ]);
     const xqmauth_val = crypto.createHmac("sha256", xqmauth_secret).update(timestamp.toString()).digest("hex");
     this.log.debug(timestamp.toString());
-    return "v1:c95f4fd2:" + xqmauth_val;
+    return "v1:01da27b0:" + xqmauth_val;
   }
   getTokensv2(getRequest, code_verifier, reject, resolve) {
     const url = getRequest.uri.query;
@@ -1140,7 +1179,7 @@ class VwWeConnect {
     request(
       {
         method: "POST",
-        url: "https://idkproxy-service.apps.emea.vwapps.io/v1/emea/token",
+        url: "https://emea.bff.cariad.digital/login/v1/idk/token",
         headers: {
           accept: "application/json",
           "content-type": "application/x-www-form-urlencoded; charset=utf-8",
@@ -1169,12 +1208,12 @@ class VwWeConnect {
         request(
           {
             method: "POST",
-            url: "https://aazsproxy-service.apps.emea.vwapps.io/token",
+            url: "https://emea.bff.cariad.digital/login/v1/audi/token",
             headers: {
               accept: "application/json",
               "content-type": "application/json; charset=utf-8",
               "accept-charset": "utf-8",
-              "x-app-version": "4.6.0",
+              "x-app-version": "4.13.0",
               "x-app-name": "myAudi",
               "accept-language": "de-de",
               "user-agent": this.userAgent,
@@ -1325,7 +1364,7 @@ class VwWeConnect {
         code_verifier;
     }
     if (this.config.type === "id") {
-      url = "https://login.apps.emea.vwapps.io/login/v1";
+      url = "https://emea.bff.cariad.digital/user-login/login/v1";
       let redirerctUri = "weconnect://authenticated";
 
       body = JSON.stringify({
@@ -1438,6 +1477,7 @@ class VwWeConnect {
           return;
         }
         this.log.info("Start Wallcharging login");
+        
         //this.config.type === "wc"
         this.type = "Wc";
         this.country = "DE";
@@ -1452,6 +1492,7 @@ class VwWeConnect {
         this.login()
           .then(() => {
             this.log.info("Wallcharging login was successfull");
+            this.log.info("Minimum update interval is 15min for Wallcharging data, to prevent blocking");
           })
           .catch(() => {
             this.log.warn("Failled wall charger login");
@@ -1948,7 +1989,7 @@ class VwWeConnect {
         };
       }
       if (this.config.type === "id") {
-        url = "https://mobileapi.apps.emea.vwapps.io/vehicles";
+        url = "https://emea.bff.cariad.digital/vehicle/v1/vehicles";
         // @ts-ignore
         headers = {
           accept: "*/*",
@@ -2072,6 +2113,7 @@ class VwWeConnect {
               return;
             }
             if (this.config.type === "seatcupra") {
+              this.log.info("Found " + body.vehicles.length + " vehicles");
               body.vehicles.forEach((element) => {
                 const vin = element.vin;
                 if (!vin) {
@@ -2104,6 +2146,7 @@ class VwWeConnect {
                 reject();
                 return;
               }
+              this.log.info(`Found ${body.data.userVehicles.length} vehicles`);
               body.data.userVehicles.forEach(async (element) => {
                 const vin = element.vin;
                 this.vinArray.push(vin);
@@ -2138,7 +2181,7 @@ class VwWeConnect {
       this.log.debug("START getIdStatus");
       await axios({
         method: "get",
-        url: "https://mobileapi.apps.emea.vwapps.io/vehicles/" + vin + "/parkingposition",
+        url: "https://emea.bff.cariad.digital/vehicle/v1/vehicles/" + vin + "/parkingposition",
         headers: {
           "content-type": "application/json",
           accept: "*/*",
@@ -2165,7 +2208,7 @@ class VwWeConnect {
 
       await axios({
         method: "get",
-        url: "https://mobileapi.apps.emea.vwapps.io/vehicles/" + vin + "/selectivestatus?jobs=all",
+        url: "https://emea.bff.cariad.digital/vehicle/v1/vehicles/" + vin + "/selectivestatus?jobs=all",
         headers: {
           "content-type": "application/json",
           accept: "*/*",
@@ -2190,7 +2233,12 @@ class VwWeConnect {
               }
             }
           }
-
+          if (data.odometerStatus && data.odometerStatus.error) {
+            this.log.warn("Odometer Error: " + data.odometerStatus.error);
+            this.log.info(
+              "Please activate die Standortdaten freigeben und die automatische Terminvereinbarung in der VW App to receive odometer data",
+            );
+          }
           // this.extractKeys(this, vin + ".status", data);
           // this.json2iob.parse(vin + ".status", data, { forceIndex: true });
           if (this.config.rawJson) {
@@ -2200,6 +2248,10 @@ class VwWeConnect {
           resolve();
         })
         .catch((error) => {
+          if (error.response && error.response.status >= 500) {
+            this.log.info("Server not available:" + JSON.stringify(error.response.data));
+            return;
+          }
           this.log.error(error);
           error.response && this.log.error(JSON.stringify(error.response.data));
           reject();
@@ -2489,6 +2541,14 @@ class VwWeConnect {
               this.log.debug("304 No values updated");
               return;
             }
+            if (error.response.status === 412) {
+              this.log.debug(JSON.stringify(error.response.data));
+              return;
+            }
+            if (error.response.status >= 500) {
+              this.log.info("Server not available:" + JSON.stringify(error.response.data));
+              return;
+            }
             this.log.error(JSON.stringify(error.response.data));
           }
           this.log.error(error);
@@ -2697,6 +2757,16 @@ class VwWeConnect {
 
 
     getWcData(limit) {
+    //check if latest fetching is minimum 15 minutes ago
+    if (this.lastWcFetch && this.lastWcFetch + 15 * 60 * 1000 > Date.now()) {
+      this.log.debug("We Charge data already fetched in last 15 minutes");
+      return;
+    }
+    if (!this.config.wc_access_token) {
+      this.log.debug("We Charge access token not set");
+      return;
+    }
+    this.lastWcFetch = Date.now();
     if (limit == -1) {
       this.log.debug("We Charge disabled in config");
       return;
@@ -2737,12 +2807,16 @@ class VwWeConnect {
                     });
                 });
             })
-            .catch((hideError) => {
+            .catch((hideError, err) => {
                 if (hideError) {
                     this.log.debug("Failed to get subscription");
                     return;
                 }
+      
                 this.log.error("Failed to get subscription");
+                if (err && (err.statusCode === 401 || err.statusCode === 403)) {
+                  this.config.wc_access_token = null;
+                }
             });
     this.genericRequest(
       "https://wecharge.apps.emea.vwapps.io/charge-and-pay/v1/charging/records?limit=" + limit + "&offset=0",
@@ -2758,12 +2832,14 @@ class VwWeConnect {
             })
             .catch((hideError) => {
                 this.boolFinishChargeAndPay = true;
-                if (hideError) {
+                if (hideError, err) {
                     this.log.debug("Failed to get chargeandpay records");
                     return;
                 }
                 this.log.error("Failed to get chargeandpay records");
-
+                if (err && (err.statusCode === 401 || err.statusCode === 403)) {
+                  this.config.wc_access_token = null;
+                }
             });
     this.genericRequest(
       "https://wecharge.apps.emea.vwapps.io/home-charging/v1/stations?limit=" + limit,
@@ -2948,12 +3024,12 @@ class VwWeConnect {
             if (value === "settings") {
                 method = "PUT";
             }
-            this.log.debug("https://mobileapi.apps.emea.vwapps.io/vehicles/" + vin + "/" + action + "/" + value);
+            this.log.debug("https://emea.bff.cariad.digital/vehicle/v1/vehicles/" + vin + "/" + action + "/" + value);
             this.log.debug("setIdRemote: " + JSON.stringify(body));
             request(
                 {
                     method: method,
-                    url: "https://mobileapi.apps.emea.vwapps.io/vehicles/" + vin + "/" + action + "/" + value,
+                    url: "https://emea.bff.cariad.digital/vehicle/v1/vehicles/" + vin + "/" + action + "/" + value,
 
                     headers: {
                         "content-type": "application/json",
@@ -3016,12 +3092,12 @@ class VwWeConnect {
         "accept-charset": "utf-8",
         "x-qmauth": this.getQmauth(),
         "accept-language": "de-de",
-        "user-agent": "myAudi-Android/4.6.0 (Build 800236847.2111261819) Android/11",
+        "user-agent": "myAudi-Android/4.13.0 (Build 800236847.2111261819) Android/11",
       };
       request(
         {
           method: "POST",
-          url: "https://idkproxy-service.apps.emea.vwapps.io/v1/emea/token",
+          url: "https://emea.bff.cariad.digital/login/v1/idk/token",
           headers: headers,
           followAllRedirects: true,
           gzip: true,
@@ -3061,7 +3137,7 @@ class VwWeConnect {
             this.log.debug("Token Refresh started");
             request.get(
                 {
-                    url: "https://login.apps.emea.vwapps.io/refresh/v1",
+                    url: "https://emea.bff.cariad.digital/user-login/refresh/v1",
 
                     headers: {
                         accept: "*/*",
@@ -4053,6 +4129,7 @@ class VwWeConnect {
   }
     extractHidden(body) {
         const returnObject = {};
+        if (!body) return returnObject;
         let matches;
         if (body.matchAll) {
             matches = body.matchAll(/<input (?=[^>]* name=["']([^'"]*)|)(?=[^>]* value=["']([^'"]*)|)/g);
@@ -4179,7 +4256,7 @@ class VwWeConnect {
             const city = body.address.city || body.address.town || body.address.village;
             const fullAdress =
               body.address.road +
-              (number == "" ? "" : " ") +   // skip blank if house number missing
+              (number == "" ? "" : " ") + // skip blank if house number missing
               number +
               ", " +
               body.address.postcode +
