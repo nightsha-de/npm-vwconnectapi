@@ -17,11 +17,11 @@
   "author": "nightsha-de",
   "license": "MIT",
   "dependencies": {
-    "@peculiar/webcrypto": "^1.4.1",
+    "@peculiar/webcrypto": "^1.4.3",
     "axios": "^0.27.2",
     "json-bigint": "^1.0.0",
     "ngeohash": "^0.6.3",
-    "qs": "^6.11.0",
+    "qs": "^6.11.1",
     "request": "^2.88.2",
     "traverse": "^0.6.7",
     "uuid": "^9.0.0"
